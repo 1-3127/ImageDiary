@@ -31,7 +31,7 @@ class SettingsRepositoryTests(TestCase):
 
             self.assertEqual(repository.load(), expected)
 
-    def test_migrates_removed_debug_interval_to_default(self) -> None:
+    def test_preserves_debug_interval(self) -> None:
         with TemporaryDirectory() as temporary_directory:
             backend = QSettings(
                 str(Path(temporary_directory) / "settings.ini"),
@@ -41,4 +41,4 @@ class SettingsRepositoryTests(TestCase):
 
             loaded = SettingsRepository(backend).load()
 
-            self.assertEqual(loaded.capture_interval_seconds, 15 * 60)
+            self.assertEqual(loaded.capture_interval_seconds, 60)

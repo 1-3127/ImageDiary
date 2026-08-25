@@ -73,6 +73,8 @@ class SessionControllerTests(TestCase):
             screenshots.mkdir(parents=True)
             image_path = screenshots / "2030.png"
             Image.new("RGB", (8, 8), "green").save(image_path)
+            last_image_path = screenshots / "2045.png"
+            Image.new("RGB", (8, 8), "blue").save(last_image_path)
             settings = AppSettings(
                 root / "export",
                 internal_storage_root=root / "internal",
@@ -81,7 +83,7 @@ class SessionControllerTests(TestCase):
             candidate = RecoveryCandidate(
                 internal_session,
                 screenshots,
-                (image_path,),
+                (image_path, last_image_path),
                 datetime(2026, 8, 25, 20, 30),
             )
 
@@ -89,7 +91,7 @@ class SessionControllerTests(TestCase):
 
             self.assertIs(controller.state, SessionState.IDLE)
             exported_session = root / "export" / "260825"
-            self.assertEqual(len(list(exported_session.glob("Diary_*.gif"))), 1)
+            self.assertTrue((exported_session / "Diary_2030-2045.gif").is_file())
 
     def test_can_export_only_gif_on_finish(self) -> None:
         with TemporaryDirectory() as temporary_directory:

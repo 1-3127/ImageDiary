@@ -73,6 +73,7 @@ class MainWindowTests(TestCase):
         self.assertEqual(dialog._interval.maximum(), 30)
         self.assertEqual(dialog._interval.singleStep(), 5)
         self.assertEqual(dialog._interval.value(), 15)
+        self.assertFalse(dialog._debug_interval.isChecked())
         self.assertTrue(dialog._export_screenshots.isChecked())
         dialog.close()
 

@@ -37,8 +37,8 @@ class SessionStorage:
     @staticmethod
     def gif_output_path(
         session_directory: Path,
-        started_at: datetime,
-        finished_at: datetime,
+        first_image: Path,
+        last_image: Path,
     ) -> Path:
-        filename = f"Diary_{started_at:%H%M}-{finished_at:%H%M}.gif"
+        filename = f"Diary_{first_image.stem}-{last_image.stem}.gif"
         return session_directory / filename

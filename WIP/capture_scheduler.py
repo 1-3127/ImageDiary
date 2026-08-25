@@ -1,4 +1,4 @@
-"""세션 시작 이후 선택한 간격에 맞춰 캡처 신호를 발생시킨다."""
+"""시스템 시계의 선택 간격 경계에 맞춰 캡처 신호를 발생시킨다."""
 
 from __future__ import annotations
 
@@ -10,11 +10,14 @@ from settings import SUPPORTED_CAPTURE_INTERVAL_SECONDS
 
 
 def next_capture_time(now: datetime, interval_seconds: int) -> datetime:
-    """현재 시각에서 선택 간격 뒤의 다음 캡처 시각을 반환한다."""
+    """현재 시각보다 엄격히 뒤에 있는 다음 interval 경계를 반환한다."""
 
     if interval_seconds not in SUPPORTED_CAPTURE_INTERVAL_SECONDS:
         raise ValueError("Unsupported capture interval")
-    return now + timedelta(seconds=interval_seconds)
+    day_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    elapsed_seconds = (now - day_start).total_seconds()
+    next_boundary = (int(elapsed_seconds) // interval_seconds + 1) * interval_seconds
+    return day_start + timedelta(seconds=next_boundary)
 
 
 class CaptureScheduler(QObject):

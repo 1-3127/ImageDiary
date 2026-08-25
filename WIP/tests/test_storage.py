@@ -34,8 +34,10 @@ class SessionStorageTests(TestCase):
 
             self.assertEqual(session.name, "260825-02")
 
-    def test_gif_output_name_contains_session_times(self) -> None:
-        started_at = datetime(2026, 8, 25, 19, 7)
-        finished_at = datetime(2026, 8, 25, 22, 15)
-        output = SessionStorage.gif_output_path(Path("session"), started_at, finished_at)
+    def test_gif_output_name_contains_first_and_last_image_names(self) -> None:
+        output = SessionStorage.gif_output_path(
+            Path("session"),
+            Path("Screenshot/1907.png"),
+            Path("Screenshot/2215.webp"),
+        )
         self.assertEqual(output.name, "Diary_1907-2215.gif")

@@ -8,7 +8,7 @@ from pathlib import Path
 
 INTERNAL_STORAGE_ROOT = Path(r"C:\temp\workdiary")
 SUPPORTED_CAPTURE_FORMATS = ("png", "webp", "jpg")
-SUPPORTED_CAPTURE_INTERVAL_SECONDS = tuple(
+SUPPORTED_CAPTURE_INTERVAL_SECONDS = (60,) + tuple(
     minutes * 60 for minutes in range(10, 31, 5)
 )
 

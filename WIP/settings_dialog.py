@@ -62,6 +62,14 @@ class SettingsDialog(QDialog):
         interval_layout.addWidget(self._interval_value)
         form.addRow("캡처 간격:", interval_widget)
 
+        self._debug_interval = QCheckBox("1분 간격 사용 (디버그)", self)
+        self._debug_interval.setChecked(
+            self._settings.capture_interval_seconds == 60
+        )
+        self._debug_interval.toggled.connect(self._interval.setDisabled)
+        self._interval.setDisabled(self._debug_interval.isChecked())
+        form.addRow("", self._debug_interval)
+
         self._format = QComboBox(self)
         self._format.addItems(list(SUPPORTED_CAPTURE_FORMATS))
         self._format.setCurrentText(self._settings.capture_format)
@@ -134,7 +142,9 @@ class SettingsDialog(QDialog):
         updated = replace(
             self._settings,
             export_root=Path(export_path),
-            capture_interval_seconds=self._interval.value() * 60,
+            capture_interval_seconds=(
+                60 if self._debug_interval.isChecked() else self._interval.value() * 60
+            ),
             capture_format=self._format.currentText(),
             image_quality=self._quality.value(),
             run_at_login=self._run_at_login.isChecked(),

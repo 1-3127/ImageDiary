@@ -10,7 +10,7 @@ from PySide6.QtCore import QObject, Signal
 
 from capture_scheduler import CaptureScheduler
 from file_exporter import FileExportError, FileExporter
-from gif_builder import GifBuilder
+from gif_builder import SUPPORTED_IMAGE_SUFFIXES, GifBuilder
 from screenshot_capture import ScreenshotCapture, ScreenshotCaptureError
 from settings import AppSettings
 from session_recovery import RecoveryCandidate
@@ -135,13 +135,20 @@ class SessionController(QObject):
         assert self._session_directory is not None
         assert self._screenshots_directory is not None
         assert self._session_settings is not None
-        finished_at = datetime.now()
-        gif_path = self._storage.gif_output_path(
-            self._session_directory,
-            self._session_start,
-            finished_at,
-        )
         try:
+            image_paths = sorted(
+                path
+                for path in self._screenshots_directory.iterdir()
+                if path.is_file()
+                and path.suffix.lower() in SUPPORTED_IMAGE_SUFFIXES
+            )
+            if not image_paths:
+                raise ValueError("No screenshots are available for GIF generation.")
+            gif_path = self._storage.gif_output_path(
+                self._session_directory,
+                image_paths[0],
+                image_paths[-1],
+            )
             frame_count = self._gif_builder.build(
                 self._screenshots_directory,
                 gif_path,
