@@ -28,7 +28,9 @@ ImageDiary/
    ├─ capture_scheduler.py
    ├─ screenshot_capture.py
    ├─ gif_builder.py
+   ├─ storage.py
    ├─ settings.py
+   ├─ tests/
    └─ requirements.txt
 ```
 
@@ -43,6 +45,7 @@ cd WIP
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install -r requirements.txt
+python -m unittest discover -s tests -v
 python main.py
 ```
 

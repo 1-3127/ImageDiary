@@ -12,6 +12,7 @@ from capture_scheduler import CaptureScheduler
 from gif_builder import GifBuilder
 from screenshot_capture import ScreenshotCapture
 from settings import AppSettings
+from storage import SessionStorage
 
 
 class SessionState(str, Enum):
@@ -38,6 +39,7 @@ class SessionController(QObject):
         self._scheduler: CaptureScheduler | None = None
         self._screenshot_capture = ScreenshotCapture()
         self._gif_builder = GifBuilder()
+        self._storage = SessionStorage(settings.storage_root)
 
     @property
     def state(self) -> SessionState:
@@ -48,7 +50,7 @@ class SessionController(QObject):
             return
 
         self._session_start = datetime.now()
-        self._session_directory = self._create_session_directory(self._session_start)
+        self._session_directory = self._storage.create_session_directory(self._session_start)
         self._screenshots_directory = self._session_directory / "screenshots"
         self._screenshots_directory.mkdir(parents=True, exist_ok=True)
         self._capture_count = 0
@@ -73,8 +75,11 @@ class SessionController(QObject):
         assert self._session_directory is not None
         assert self._screenshots_directory is not None
         finished_at = datetime.now()
-        gif_name = f"{self._session_start:%Y%m%d_%H%M}-{finished_at:%H%M}.gif"
-        gif_path = self._session_directory / gif_name
+        gif_path = self._storage.gif_output_path(
+            self._session_directory,
+            self._session_start,
+            finished_at,
+        )
         try:
             frame_count = self._gif_builder.build(
                 self._screenshots_directory,
@@ -102,11 +107,6 @@ class SessionController(QObject):
             self.status_changed.emit("Recording")
         except OSError as error:
             self.status_changed.emit(f"Capture failed: {error}")
-
-    def _create_session_directory(self, started_at: datetime) -> Path:
-        directory = self._settings.storage_root / started_at.strftime("%Y-%m-%d") / started_at.strftime("%H%M")
-        directory.mkdir(parents=True, exist_ok=False)
-        return directory
 
     def _set_state(self, state: SessionState) -> None:
         self._state = state

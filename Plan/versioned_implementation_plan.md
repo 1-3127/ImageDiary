@@ -128,7 +128,9 @@ WIP/
 ├─ capture_scheduler.py    # 다음 시계 경계 계산과 QTimer
 ├─ screenshot_capture.py   # mss 캡처 및 파일 저장
 ├─ gif_builder.py          # 정렬, 크기 통일, GIF 인코딩
+├─ storage.py              # 세션 폴더와 결과 경로 생성
 ├─ settings.py             # 설정값과 경로 계산
+├─ tests/                  # 경계시각, 저장 경로, GIF 순서 자동 검증
 └─ requirements.txt        # 실행 의존성
 ```
 
