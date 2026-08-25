@@ -8,13 +8,10 @@ from pathlib import Path
 from PySide6.QtCore import Qt, QUrl
 from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import (
-    QButtonGroup,
-    QGroupBox,
     QHBoxLayout,
     QMainWindow,
     QMessageBox,
     QPushButton,
-    QRadioButton,
     QToolButton,
     QVBoxLayout,
     QWidget,
@@ -66,20 +63,6 @@ class MainWindow(QMainWindow):
         toolbar.addWidget(self._pin_button)
         toolbar.addWidget(self._settings_button)
 
-        interval_group = QGroupBox("캡처 간격", root)
-        interval_layout = QHBoxLayout(interval_group)
-        self._interval_buttons = QButtonGroup(self)
-        self._debug_interval = QRadioButton("60초 (디버그)", interval_group)
-        self._fifteen_minutes = QRadioButton("15분", interval_group)
-        self._thirty_minutes = QRadioButton("30분", interval_group)
-        self._fifteen_minutes.setChecked(True)
-        self._interval_buttons.addButton(self._debug_interval, 60)
-        self._interval_buttons.addButton(self._fifteen_minutes, 15 * 60)
-        self._interval_buttons.addButton(self._thirty_minutes, 30 * 60)
-        interval_layout.addWidget(self._debug_interval)
-        interval_layout.addWidget(self._fifteen_minutes)
-        interval_layout.addWidget(self._thirty_minutes)
-
         self._session_status = SessionStatusWidget(root)
 
         buttons = QHBoxLayout()
@@ -89,7 +72,6 @@ class MainWindow(QMainWindow):
         buttons.addWidget(self._finish_button)
 
         layout.addLayout(toolbar)
-        layout.addWidget(interval_group)
         layout.addWidget(self._session_status)
         layout.addLayout(buttons)
         self.setCentralWidget(root)
@@ -111,16 +93,12 @@ class MainWindow(QMainWindow):
         self._controller.encoding_progress.connect(self._gif_progress.update_progress)
 
     def _start(self) -> None:
-        interval_seconds = self._interval_buttons.checkedId()
-        self._controller.start(interval_seconds)
+        self._controller.start()
 
     def _apply_state(self, state: SessionState) -> None:
         is_idle = state is SessionState.IDLE
         self._start_button.setEnabled(is_idle)
         self._finish_button.setEnabled(state is SessionState.RECORDING)
-        self._debug_interval.setEnabled(is_idle)
-        self._fifteen_minutes.setEnabled(is_idle)
-        self._thirty_minutes.setEnabled(is_idle)
         if is_idle:
             self._session_status.set_next_capture(None)
         if state is SessionState.ENCODING:
@@ -173,7 +151,7 @@ class MainWindow(QMainWindow):
 
         action = ask_recovery_action(candidate, self)
         if action is RecoveryAction.RESUME:
-            self._controller.resume(candidate, self._interval_buttons.checkedId())
+            self._controller.resume(candidate)
         elif action is RecoveryAction.FINISH:
             self._controller.finish_recovered(candidate)
 

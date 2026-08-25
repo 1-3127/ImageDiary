@@ -4,7 +4,9 @@
 
 - v0.1: 구현 및 실환경 검증 완료
 - 검증 완료: `YYMMDD-NN` 세션 폴더, 스크린샷 캡처, Animated GIF 생성·재생, 결과 폴더 자동 열기, UTF-8 한글 UI
-- v0.2: 기능 구현 및 자동 검증 완료, Windows 실환경 검증 대기
+- v0.2: 피드백 반영 및 자동 검증 완료, Windows 실환경 재검증 대기
+- 실환경 확인 완료: 항상 위 고정, 사용자 지정 저장 경로, JPG 캡처
+- Windows 로그인 시작은 전체 개발 종료 후 검증한다.
 
 ## 프로젝트 목적
 
@@ -31,7 +33,7 @@
 
 - v0.2 내부 원본 루트는 `C:\temp\workdiary`로 고정한다.
 - 세션 복구와 완료 여부 판정은 내부 원본만 사용한다.
-- 사용자가 설정한 Screenshot/GIF 경로에는 내부 원본의 복사본을 제공한다.
+- 사용자가 설정한 단일 저장 경로에는 내부 Screenshot과 GIF 원본의 복사본을 제공한다.
 - 내부 세션 폴더 날짜가 보존기간 이상 지난 경우 정리한다. 기본 보존기간은 7일이며 향후 설정 UI에 노출할 수 있도록 변수화한다.
 
 ### 세션 경로
@@ -52,8 +54,7 @@
 |---|---|---|---|
 | `capture_interval_seconds` | `60`, `900`, `1800` | v0.1 | 60초 디버그 및 15/30분 캡처 경계 단위 |
 | `internal_storage_root` | `C:\temp\workdiary` | 고정 | 복구 판단에 사용하는 내부 원본 루트 |
-| `screenshot_export_root` | Pictures/WorkDiary | v0.2 | 사용자에게 제공할 Screenshot 복사본 루트 |
-| `gif_export_root` | Pictures/WorkDiary | v0.2 | 사용자에게 제공할 GIF 복사본 루트 |
+| `export_root` | Pictures/WorkDiary | v0.2 | 사용자에게 제공할 Screenshot/GIF 복사본 루트 |
 | `capture_format` | `png` | v0.2 | `png`, `webp`, `jpg` 중 원본 캡처 포맷 |
 | `image_quality` | `85` | v0.2 | JPEG/WebP 손실 압축 품질 |
 | `internal_retention_days` | `7` | 추후 | 내부 원본 자동 정리 기준 |
@@ -134,6 +135,7 @@ WIP/
 ├─ screenshot_capture.py   # mss 캡처 및 파일 저장
 ├─ gif_builder.py          # 정렬, 크기 통일, GIF 인코딩
 ├─ file_exporter.py        # 내부 원본을 사용자 경로로 복사
+├─ data_cleanup.py         # 최신 2개 외 사용자 세션을 휴지통으로 이동
 ├─ retention.py            # 내부 원본 보존기간 정리
 ├─ session_recovery.py     # 최신 미완료 세션 판정
 ├─ recovery_dialog.py      # 복구/마치기 선택 UI
@@ -163,14 +165,18 @@ WIP/
 
 - 최신 내부 세션 폴더에서 Screenshot 존재 및 GIF 부재를 검사해 비정상 종료 감지
 - 미완료 세션에 `세션 복구`와 `세션 마치기` 제공
-- 내부 원본을 사용자 지정 Screenshot/GIF 경로로 복사
+- 내부 원본을 사용자 지정 단일 저장 경로로 복사
+- 내부 및 사용자 경로 모두에서 충돌하지 않는 `YYMMDD[-NN]` 세션명 선택
 - PNG/WebP/JPG 포맷 선택, JPG/WebP 기본 품질 85
 - 설정 창과 설정 영구 저장
+- 캡처 간격을 설정 창에서 선택
 - 세션 중 설정 변경 시 다음 세션부터 적용됨을 안내
 - Windows 로그인 시 시작 토글
 - 항상 위에 고정 토글과 마우스 오버 도움말
 - GIF 생성 진행 상태를 별도 팝업으로 표시
 - 7일 이상 지난 내부 세션 원본 자동 정리
+- 데이터 정리 버튼으로 사용자 경로의 최신 2개 외 세션을 확인 후 휴지통으로 이동
+- 메인 UI의 캡처 수와 다음 캡처를 `다음 시각 (순번)` 형식의 캡처 현황으로 통합
 
 ### 완료 기준
 

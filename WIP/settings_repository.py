@@ -20,22 +20,19 @@ class SettingsRepository:
         ).lower()
         if capture_format not in SUPPORTED_CAPTURE_FORMATS:
             capture_format = defaults.capture_format
+        export_root = self._backend.value("paths/export_root", None)
+        if not export_root:
+            export_root = self._backend.value(
+                "paths/screenshot_export_root",
+                str(defaults.export_root),
+            )
 
         return AppSettings(
-            screenshot_export_root=Path(
-                str(
-                    self._backend.value(
-                        "paths/screenshot_export_root",
-                        str(defaults.screenshot_export_root),
-                    )
-                )
-            ),
-            gif_export_root=Path(
-                str(
-                    self._backend.value(
-                        "paths/gif_export_root",
-                        str(defaults.gif_export_root),
-                    )
+            export_root=Path(str(export_root)),
+            capture_interval_seconds=int(
+                self._backend.value(
+                    "capture/interval_seconds",
+                    defaults.capture_interval_seconds,
                 )
             ),
             capture_format=capture_format,
@@ -70,10 +67,10 @@ class SettingsRepository:
         )
 
     def save(self, settings: AppSettings) -> None:
+        self._backend.setValue("paths/export_root", str(settings.export_root))
         self._backend.setValue(
-            "paths/screenshot_export_root", str(settings.screenshot_export_root)
+            "capture/interval_seconds", settings.capture_interval_seconds
         )
-        self._backend.setValue("paths/gif_export_root", str(settings.gif_export_root))
         self._backend.setValue("capture/format", settings.capture_format)
         self._backend.setValue("capture/image_quality", settings.image_quality)
         self._backend.setValue("startup/run_at_login", settings.run_at_login)

@@ -22,8 +22,8 @@ def default_export_root() -> Path:
 class AppSettings:
     """세션 시작 시 복사하여 사용하는 영구 앱 설정."""
 
-    screenshot_export_root: Path
-    gif_export_root: Path
+    export_root: Path
+    capture_interval_seconds: int = 15 * 60
     capture_format: str = "png"
     image_quality: int = 85
     run_at_login: bool = False
@@ -41,6 +41,8 @@ class AppSettings:
             raise ValueError("image_quality must be between 1 and 100")
         if self.internal_retention_days < 1:
             raise ValueError("internal_retention_days must be at least 1")
+        if self.capture_interval_seconds not in {60, 15 * 60, 30 * 60}:
+            raise ValueError("Unsupported capture interval")
 
     @property
     def storage_root(self) -> Path:
@@ -52,8 +54,7 @@ class AppSettings:
 def default_settings() -> AppSettings:
     export_root = default_export_root()
     return AppSettings(
-        screenshot_export_root=export_root,
-        gif_export_root=export_root,
+        export_root=export_root,
     )
 
 

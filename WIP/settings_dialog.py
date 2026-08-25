@@ -16,6 +16,7 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QLineEdit,
+    QMessageBox,
     QPushButton,
     QSpinBox,
     QVBoxLayout,
@@ -23,6 +24,7 @@ from PySide6.QtWidgets import (
 )
 
 from settings import AppSettings, SUPPORTED_CAPTURE_FORMATS
+from data_cleanup import find_cleanup_candidates, move_old_sessions_to_trash
 
 
 class SettingsDialog(QDialog):
@@ -39,10 +41,16 @@ class SettingsDialog(QDialog):
         layout = QVBoxLayout(self)
         form = QFormLayout()
 
-        self._screenshot_path = QLineEdit(str(self._settings.screenshot_export_root), self)
-        self._gif_path = QLineEdit(str(self._settings.gif_export_root), self)
-        form.addRow("스크린샷 저장 경로:", self._path_row(self._screenshot_path, "스크린샷"))
-        form.addRow("GIF 저장 경로:", self._path_row(self._gif_path, "GIF"))
+        self._export_path = QLineEdit(str(self._settings.export_root), self)
+        form.addRow("스크린샷 저장 경로:", self._path_row(self._export_path, "작업 일기"))
+
+        self._interval = QComboBox(self)
+        self._interval.addItem("60초 (디버그)", 60)
+        self._interval.addItem("15분", 15 * 60)
+        self._interval.addItem("30분", 30 * 60)
+        interval_index = self._interval.findData(self._settings.capture_interval_seconds)
+        self._interval.setCurrentIndex(max(0, interval_index))
+        form.addRow("캡처 간격:", self._interval)
 
         self._format = QComboBox(self)
         self._format.addItems(list(SUPPORTED_CAPTURE_FORMATS))
@@ -62,6 +70,10 @@ class SettingsDialog(QDialog):
         note = QLabel("진행 중 변경한 설정은 다음 세션부터 적용됩니다.", self)
         note.setWordWrap(True)
 
+        cleanup_button = QPushButton("데이터 정리", self)
+        cleanup_button.setToolTip("최신 2개 세션을 제외한 폴더를 휴지통으로 이동")
+        cleanup_button.clicked.connect(self._cleanup_data)
+
         buttons = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Save | QDialogButtonBox.StandardButton.Cancel,
             self,
@@ -73,6 +85,7 @@ class SettingsDialog(QDialog):
 
         layout.addLayout(form)
         layout.addWidget(note)
+        layout.addWidget(cleanup_button)
         layout.addWidget(buttons)
 
     def _path_row(self, line_edit: QLineEdit, label: str) -> QWidget:
@@ -95,18 +108,46 @@ class SettingsDialog(QDialog):
             line_edit.setText(selected)
 
     def _save(self) -> None:
-        screenshot_path = self._screenshot_path.text().strip()
-        gif_path = self._gif_path.text().strip()
-        if not screenshot_path or not gif_path:
+        export_path = self._export_path.text().strip()
+        if not export_path:
             return
 
         updated = replace(
             self._settings,
-            screenshot_export_root=Path(screenshot_path),
-            gif_export_root=Path(gif_path),
+            export_root=Path(export_path),
+            capture_interval_seconds=int(self._interval.currentData()),
             capture_format=self._format.currentText(),
             image_quality=self._quality.value(),
             run_at_login=self._run_at_login.isChecked(),
         )
         self.settings_saved.emit(updated)
         self.accept()
+
+    def _cleanup_data(self) -> None:
+        export_root = Path(self._export_path.text().strip())
+        candidates = find_cleanup_candidates(export_root)
+        if not candidates:
+            QMessageBox.information(self, "데이터 정리", "정리할 세션 폴더가 없습니다.")
+            return
+
+        answer = QMessageBox.warning(
+            self,
+            "데이터 정리 주의",
+            "가장 최근 세션과 바로 이전 세션을 제외한 모든 세션 폴더를 정리합니다.\n\n"
+            "정리된 폴더는 휴지통으로 버려집니다.",
+            QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel,
+            QMessageBox.StandardButton.Cancel,
+        )
+        if answer != QMessageBox.StandardButton.Ok:
+            return
+
+        try:
+            moved = move_old_sessions_to_trash(export_root)
+        except OSError as error:
+            QMessageBox.critical(self, "데이터 정리 실패", str(error))
+            return
+        QMessageBox.information(
+            self,
+            "데이터 정리 완료",
+            f"{len(moved)}개 세션 폴더를 휴지통으로 이동했습니다.",
+        )

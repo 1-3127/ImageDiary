@@ -17,8 +17,8 @@ class SettingsRepositoryTests(TestCase):
             )
             repository = SettingsRepository(backend)
             expected = AppSettings(
-                screenshot_export_root=Path("D:/Captures"),
-                gif_export_root=Path("D:/Diaries"),
+                export_root=Path("D:/WorkDiary"),
+                capture_interval_seconds=30 * 60,
                 capture_format="webp",
                 image_quality=85,
                 run_at_login=True,

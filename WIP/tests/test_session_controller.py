@@ -18,8 +18,7 @@ class SessionControllerTests(TestCase):
             root = Path(temporary_directory)
             controller = SessionController(
                 AppSettings(
-                    root / "screenshot-export",
-                    root / "gif-export",
+                    root / "export",
                     internal_storage_root=root / "internal",
                 )
             )
@@ -30,7 +29,7 @@ class SessionControllerTests(TestCase):
                 "session_controller.SessionStorage.create_session_directory",
                 side_effect=OSError("disk unavailable"),
             ):
-                controller.start(15 * 60)
+                controller.start()
 
             self.assertIs(controller.state, SessionState.IDLE)
             self.assertEqual(statuses, ["세션 시작 실패: disk unavailable"])
@@ -40,8 +39,7 @@ class SessionControllerTests(TestCase):
             root = Path(temporary_directory)
             controller = SessionController(
                 AppSettings(
-                    root / "screenshot-export",
-                    root / "gif-export",
+                    root / "export",
                     internal_storage_root=root / "internal",
                 )
             )
@@ -56,7 +54,7 @@ class SessionControllerTests(TestCase):
             outputs: list[Path] = []
             controller.output_ready.connect(outputs.append)
 
-            controller.start(15 * 60)
+            controller.start()
             controller._capture_screenshot()
             controller.finish()
 
@@ -64,7 +62,7 @@ class SessionControllerTests(TestCase):
             self.assertEqual(len(outputs), 1)
             self.assertEqual(len(list(outputs[0].glob("*.gif"))), 1)
             exported_screenshots = (
-                root / "screenshot-export" / outputs[0].name / "Screenshot"
+                root / "export" / outputs[0].name / "Screenshot"
             )
             self.assertEqual(len(list(exported_screenshots.glob("*.png"))), 1)
 
@@ -77,8 +75,7 @@ class SessionControllerTests(TestCase):
             image_path = screenshots / "2030.png"
             Image.new("RGB", (8, 8), "green").save(image_path)
             settings = AppSettings(
-                root / "screenshot-export",
-                root / "gif-export",
+                root / "export",
                 internal_storage_root=root / "internal",
             )
             controller = SessionController(settings)
@@ -92,15 +89,14 @@ class SessionControllerTests(TestCase):
             controller.finish_recovered(candidate)
 
             self.assertIs(controller.state, SessionState.IDLE)
-            exported_session = root / "gif-export" / "260825"
+            exported_session = root / "export" / "260825"
             self.assertEqual(len(list(exported_session.glob("Diary_*.gif"))), 1)
 
     def test_settings_changed_during_session_apply_next_time(self) -> None:
         with TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)
             initial_settings = AppSettings(
-                root / "screenshot-export",
-                root / "gif-export",
+                root / "export",
                 capture_format="png",
                 internal_storage_root=root / "internal",
             )
@@ -117,7 +113,7 @@ class SessionControllerTests(TestCase):
                 return output_path
 
             controller._screenshot_capture.capture = create_test_capture
-            controller.start(15 * 60)
+            controller.start()
             controller.update_settings(
                 replace(initial_settings, capture_format="jpg")
             )

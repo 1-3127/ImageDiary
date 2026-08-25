@@ -50,7 +50,7 @@ class SessionController(QObject):
     def state(self) -> SessionState:
         return self._state
 
-    def start(self, interval_seconds: int) -> None:
+    def start(self) -> None:
         if self._state is not SessionState.IDLE:
             return
 
@@ -58,7 +58,10 @@ class SessionController(QObject):
         self._storage = SessionStorage(self._session_settings.internal_storage_root)
         self._session_start = datetime.now()
         try:
-            self._session_directory = self._storage.create_session_directory(self._session_start)
+            self._session_directory = self._storage.create_session_directory(
+                self._session_start,
+                (self._session_settings.export_root,),
+            )
             self._screenshots_directory = self._session_directory / "Screenshot"
             self._screenshots_directory.mkdir(parents=True, exist_ok=True)
         except OSError as error:
@@ -69,7 +72,10 @@ class SessionController(QObject):
         self._set_state(SessionState.RECORDING)
         self.status_changed.emit("기록 중")
 
-        self._scheduler = CaptureScheduler(interval_seconds, self)
+        self._scheduler = CaptureScheduler(
+            self._session_settings.capture_interval_seconds,
+            self,
+        )
         self._scheduler.capture_due.connect(self._capture_screenshot)
         self._scheduler.next_time_changed.connect(self.next_capture_changed)
         self._scheduler.start()
@@ -79,7 +85,7 @@ class SessionController(QObject):
 
         self._next_settings = settings
 
-    def resume(self, candidate: RecoveryCandidate, interval_seconds: int) -> None:
+    def resume(self, candidate: RecoveryCandidate) -> None:
         if self._state is not SessionState.IDLE:
             return
 
@@ -93,7 +99,10 @@ class SessionController(QObject):
         self._set_state(SessionState.RECORDING)
         self.status_changed.emit("복구된 세션 기록 중")
 
-        self._scheduler = CaptureScheduler(interval_seconds, self)
+        self._scheduler = CaptureScheduler(
+            self._session_settings.capture_interval_seconds,
+            self,
+        )
         self._scheduler.capture_due.connect(self._capture_screenshot)
         self._scheduler.next_time_changed.connect(self.next_capture_changed)
         self._scheduler.start()
@@ -143,12 +152,12 @@ class SessionController(QObject):
                 if screenshot.is_file():
                     self._file_exporter.copy_screenshot(
                         screenshot,
-                        self._session_settings.screenshot_export_root,
+                        self._session_settings.export_root,
                         self._session_directory.name,
                     )
             exported_gif = self._file_exporter.copy_gif(
                 gif_path,
-                self._session_settings.gif_export_root,
+                self._session_settings.export_root,
                 self._session_directory.name,
             )
             self.status_changed.emit(f"완료: {frame_count}프레임")
@@ -178,7 +187,7 @@ class SessionController(QObject):
             )
             self._file_exporter.copy_screenshot(
                 screenshot,
-                self._session_settings.screenshot_export_root,
+                self._session_settings.export_root,
                 self._session_directory.name,
             )
             self._capture_count += 1

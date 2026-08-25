@@ -19,6 +19,21 @@ class SessionStorageTests(TestCase):
             self.assertTrue(first.is_dir())
             self.assertTrue(second.is_dir())
 
+    def test_existing_export_folder_reserves_session_name(self) -> None:
+        started_at = datetime(2026, 8, 25, 19, 7)
+        with TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            internal_root = root / "internal"
+            export_root = root / "export"
+            (export_root / "260825").mkdir(parents=True)
+
+            session = SessionStorage(internal_root).create_session_directory(
+                started_at,
+                (export_root,),
+            )
+
+            self.assertEqual(session.name, "260825-02")
+
     def test_gif_output_name_contains_session_times(self) -> None:
         started_at = datetime(2026, 8, 25, 19, 7)
         finished_at = datetime(2026, 8, 25, 22, 15)
