@@ -29,6 +29,7 @@ class SessionController(QObject):
     next_capture_changed = Signal(datetime)
     status_changed = Signal(str)
     output_ready = Signal(Path)
+    encoding_progress = Signal(int, int)
 
     def __init__(self, settings: AppSettings, parent: QObject | None = None) -> None:
         super().__init__(parent)
@@ -136,6 +137,7 @@ class SessionController(QObject):
                 gif_path,
                 self._session_settings.gif_frame_duration_ms,
                 self._session_settings.gif_loop,
+                self.encoding_progress.emit,
             )
             for screenshot in self._screenshots_directory.iterdir():
                 if screenshot.is_file():

@@ -35,3 +35,22 @@ class GifBuilderTests(TestCase):
 
             with self.assertRaises(ValueError):
                 GifBuilder().build(screenshots, root / "diary.gif", 500, 0)
+
+    def test_reports_encoding_progress(self) -> None:
+        with TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            screenshots = root / "Screenshot"
+            screenshots.mkdir()
+            Image.new("RGB", (8, 8), "red").save(screenshots / "1915.png")
+            progress: list[tuple[int, int]] = []
+
+            GifBuilder().build(
+                screenshots,
+                root / "Diary_1915-1930.gif",
+                500,
+                0,
+                lambda current, total: progress.append((current, total)),
+            )
+
+            self.assertEqual(progress[0], (0, 2))
+            self.assertEqual(progress[-1], (2, 2))
