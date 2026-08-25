@@ -7,7 +7,7 @@ ImageDiary는 작업 세션 동안 시스템 시계의 15분 또는 30분 경계
 v0.1 MVP를 개발 중입니다.
 
 - PySide6 기반 최소 UI
-- 15분/30분 캡처 간격
+- 60초 디버그 및 15분/30분 캡처 간격
 - 시스템 시계 경계 기반 스케줄링
 - timestamp PNG 즉시 저장
 - Finish 시 단일 GIF 생성
@@ -49,7 +49,7 @@ python -m unittest discover -s tests -v
 python main.py
 ```
 
-기본 결과 저장 위치는 `%USERPROFILE%\Pictures\WorkDiary`입니다. Pictures 폴더를 찾을 수 없으면 `%USERPROFILE%\WorkDiary`를 사용합니다.
+기본 결과 저장 위치는 `%USERPROFILE%\Pictures\WorkDiary`입니다. 세션은 `YYMMDD[-NN]` 폴더, 스크린샷은 그 아래 `Screenshot` 폴더에 저장됩니다. Pictures 폴더를 찾을 수 없으면 `%USERPROFILE%\WorkDiary`를 사용합니다.
 
 ## MVP 범위 제외
 

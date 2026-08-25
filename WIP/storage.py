@@ -11,15 +11,14 @@ class SessionStorage:
         self._storage_root = storage_root
 
     def create_session_directory(self, started_at: datetime) -> Path:
-        """세션 폴더를 만들고 같은 분에 재시작하면 순번 접미사를 붙인다."""
+        """YYMMDD 폴더를 만들고 같은 날짜의 추가 세션에는 순번을 붙인다."""
 
-        day_directory = self._storage_root / started_at.strftime("%Y-%m-%d")
-        base_name = started_at.strftime("%H%M")
+        base_name = started_at.strftime("%y%m%d")
         sequence = 1
 
         while True:
             folder_name = base_name if sequence == 1 else f"{base_name}-{sequence:02d}"
-            candidate = day_directory / folder_name
+            candidate = self._storage_root / folder_name
             try:
                 candidate.mkdir(parents=True, exist_ok=False)
                 return candidate
@@ -32,5 +31,5 @@ class SessionStorage:
         started_at: datetime,
         finished_at: datetime,
     ) -> Path:
-        filename = f"{started_at:%Y%m%d_%H%M}-{finished_at:%H%M}.gif"
+        filename = f"Diary_{started_at:%H%M}-{finished_at:%H%M}.gif"
         return session_directory / filename

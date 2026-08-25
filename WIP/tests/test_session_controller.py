@@ -21,7 +21,7 @@ class SessionControllerTests(TestCase):
             controller.start(15)
 
             self.assertIs(controller.state, SessionState.IDLE)
-            self.assertEqual(statuses, ["Session start failed: disk unavailable"])
+            self.assertEqual(statuses, ["세션 시작 실패: disk unavailable"])
 
     def test_complete_session_builds_gif_and_returns_to_idle(self) -> None:
         with TemporaryDirectory() as temporary_directory:
@@ -29,7 +29,7 @@ class SessionControllerTests(TestCase):
 
             def create_test_capture(output_directory: Path) -> Path:
                 output_directory.mkdir(parents=True, exist_ok=True)
-                output_path = output_directory / "20260825_191500.png"
+                output_path = output_directory / "1915.png"
                 Image.new("RGB", (8, 8), "green").save(output_path)
                 return output_path
 
@@ -37,11 +37,11 @@ class SessionControllerTests(TestCase):
             outputs: list[Path] = []
             controller.output_ready.connect(outputs.append)
 
-            controller.start(15)
+            controller.start(15 * 60)
             controller._capture_screenshot()
             controller.finish()
 
             self.assertIs(controller.state, SessionState.IDLE)
             self.assertEqual(len(outputs), 1)
             self.assertEqual(len(list(outputs[0].glob("*.gif"))), 1)
-            self.assertEqual(len(list((outputs[0] / "screenshots").glob("*.png"))), 1)
+            self.assertEqual(len(list((outputs[0] / "Screenshot").glob("*.png"))), 1)

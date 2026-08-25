@@ -13,8 +13,8 @@ class GifBuilderTests(TestCase):
             root = Path(temporary_directory)
             screenshots = root / "screenshots"
             screenshots.mkdir()
-            Image.new("RGB", (8, 8), "blue").save(screenshots / "20260825_193000.png")
-            Image.new("RGB", (8, 8), "red").save(screenshots / "20260825_191500.png")
+            Image.new("RGB", (8, 8), "blue").save(screenshots / "1930.png")
+            Image.new("RGB", (8, 8), "red").save(screenshots / "1915.png")
             output = root / "diary.gif"
 
             frame_count = GifBuilder().build(screenshots, output, 500, 0)

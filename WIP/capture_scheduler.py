@@ -1,4 +1,4 @@
-"""시스템 시계의 15분 또는 30분 경계에 맞춰 캡처 신호를 발생시킨다."""
+"""시스템 시계의 선택 간격 경계에 맞춰 캡처 신호를 발생시킨다."""
 
 from __future__ import annotations
 
@@ -7,19 +7,19 @@ from datetime import datetime, timedelta
 from PySide6.QtCore import QObject, QTimer, Signal
 
 
-def next_capture_time(now: datetime, interval_minutes: int) -> datetime:
+SUPPORTED_INTERVAL_SECONDS = (60, 15 * 60, 30 * 60)
+
+
+def next_capture_time(now: datetime, interval_seconds: int) -> datetime:
     """현재 시각보다 엄격히 뒤에 있는 다음 interval 경계를 반환한다."""
 
-    if interval_minutes not in (15, 30):
-        raise ValueError("interval_minutes must be 15 or 30")
+    if interval_seconds not in SUPPORTED_INTERVAL_SECONDS:
+        raise ValueError("interval_seconds must be 60, 900, or 1800")
 
-    boundary_minute = ((now.minute // interval_minutes) + 1) * interval_minutes
-    candidate = now.replace(second=0, microsecond=0)
-    if boundary_minute >= 60:
-        candidate = candidate.replace(minute=0) + timedelta(hours=1)
-    else:
-        candidate = candidate.replace(minute=boundary_minute)
-    return candidate
+    day_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    elapsed_seconds = (now - day_start).total_seconds()
+    next_boundary = (int(elapsed_seconds) // interval_seconds + 1) * interval_seconds
+    return day_start + timedelta(seconds=next_boundary)
 
 
 class CaptureScheduler(QObject):
@@ -28,9 +28,11 @@ class CaptureScheduler(QObject):
     capture_due = Signal()
     next_time_changed = Signal(datetime)
 
-    def __init__(self, interval_minutes: int, parent: QObject | None = None) -> None:
+    def __init__(self, interval_seconds: int, parent: QObject | None = None) -> None:
         super().__init__(parent)
-        self._interval_minutes = interval_minutes
+        if interval_seconds not in SUPPORTED_INTERVAL_SECONDS:
+            raise ValueError("Unsupported capture interval")
+        self._interval_seconds = interval_seconds
         self._timer = QTimer(self)
         self._timer.setSingleShot(True)
         self._timer.timeout.connect(self._on_timeout)
@@ -53,7 +55,7 @@ class CaptureScheduler(QObject):
 
     def _schedule_next(self) -> None:
         now = datetime.now()
-        self._next_time = next_capture_time(now, self._interval_minutes)
+        self._next_time = next_capture_time(now, self._interval_seconds)
         delay_ms = max(1, int((self._next_time - now).total_seconds() * 1000))
         self._timer.start(delay_ms)
         self.next_time_changed.emit(self._next_time)

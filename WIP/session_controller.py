@@ -45,24 +45,24 @@ class SessionController(QObject):
     def state(self) -> SessionState:
         return self._state
 
-    def start(self, interval_minutes: int) -> None:
+    def start(self, interval_seconds: int) -> None:
         if self._state is not SessionState.IDLE:
             return
 
         self._session_start = datetime.now()
         try:
             self._session_directory = self._storage.create_session_directory(self._session_start)
-            self._screenshots_directory = self._session_directory / "screenshots"
+            self._screenshots_directory = self._session_directory / "Screenshot"
             self._screenshots_directory.mkdir(parents=True, exist_ok=True)
         except OSError as error:
-            self.status_changed.emit(f"Session start failed: {error}")
+            self.status_changed.emit(f"세션 시작 실패: {error}")
             return
         self._capture_count = 0
         self.capture_count_changed.emit(self._capture_count)
         self._set_state(SessionState.RECORDING)
-        self.status_changed.emit("Recording")
+        self.status_changed.emit("기록 중")
 
-        self._scheduler = CaptureScheduler(interval_minutes, self)
+        self._scheduler = CaptureScheduler(interval_seconds, self)
         self._scheduler.capture_due.connect(self._capture_screenshot)
         self._scheduler.next_time_changed.connect(self.next_capture_changed)
         self._scheduler.start()
@@ -73,7 +73,7 @@ class SessionController(QObject):
         assert self._scheduler is not None
         self._scheduler.stop()
         self._set_state(SessionState.ENCODING)
-        self.status_changed.emit("Encoding GIF")
+        self.status_changed.emit("GIF 생성 중")
 
         assert self._session_start is not None
         assert self._session_directory is not None
@@ -91,11 +91,11 @@ class SessionController(QObject):
                 self._settings.gif_frame_duration_ms,
                 self._settings.gif_loop,
             )
-            self.status_changed.emit(f"Completed: {frame_count} frames")
+            self.status_changed.emit(f"완료: {frame_count}프레임")
         except ValueError:
-            self.status_changed.emit("No screenshots captured; GIF was not created")
+            self.status_changed.emit("캡처 이미지가 없어 GIF를 생성하지 않았습니다")
         except (OSError, RuntimeError) as error:
-            self.status_changed.emit(f"GIF generation failed: {error}")
+            self.status_changed.emit(f"GIF 생성 실패: {error}")
         finally:
             self._set_state(SessionState.IDLE)
             if self._settings.open_output_on_finish:
@@ -109,9 +109,9 @@ class SessionController(QObject):
             self._screenshot_capture.capture(self._screenshots_directory)
             self._capture_count += 1
             self.capture_count_changed.emit(self._capture_count)
-            self.status_changed.emit("Recording")
+            self.status_changed.emit("기록 중")
         except ScreenshotCaptureError as error:
-            self.status_changed.emit(f"Capture failed: {error}")
+            self.status_changed.emit(f"화면 캡처 실패: {error}")
 
     def _set_state(self, state: SessionState) -> None:
         self._state = state

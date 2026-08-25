@@ -14,8 +14,8 @@ class SessionStorageTests(TestCase):
             first = storage.create_session_directory(started_at)
             second = storage.create_session_directory(started_at)
 
-            self.assertEqual(first.name, "1907")
-            self.assertEqual(second.name, "1907-02")
+            self.assertEqual(first.name, "260825")
+            self.assertEqual(second.name, "260825-02")
             self.assertTrue(first.is_dir())
             self.assertTrue(second.is_dir())
 
@@ -23,4 +23,4 @@ class SessionStorageTests(TestCase):
         started_at = datetime(2026, 8, 25, 19, 7)
         finished_at = datetime(2026, 8, 25, 22, 15)
         output = SessionStorage.gif_output_path(Path("session"), started_at, finished_at)
-        self.assertEqual(output.name, "20260825_1907-2215.gif")
+        self.assertEqual(output.name, "Diary_1907-2215.gif")

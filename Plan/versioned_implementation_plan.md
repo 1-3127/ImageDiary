@@ -2,9 +2,9 @@
 
 ## 구현 상태
 
-- v0.1: 코드 구현 및 자동 검증 완료 단계
-- 남은 확인: 실제 Windows 사용자 데스크톱에서 1회 캡처와 결과 GIF 열기
-- 실제 화면 캡처 확인 전에는 v0.1을 최종 완료로 표시하지 않는다.
+- v0.1: 30분 모드 실제 캡처, GIF 생성, 결과 폴더 열기 검증 완료
+- v0.1 피드백 반영 중: 짧은 경로·파일명, 60초 디버그 간격, UTF-8 한글 UI
+- 피드백 반영본의 실제 화면 캡처를 재확인한 뒤 v0.1을 최종 완료로 표시한다.
 
 ## 프로젝트 목적
 
@@ -14,8 +14,8 @@
 
 - Python, PySide6, `mss`, Pillow를 사용한다.
 - 캡처는 메모리에 보관하지 않고 즉시 파일로 저장한다.
-- 캡처 시각은 상대 대기 시간이 아닌 시스템 시계의 15분 또는 30분 경계에 맞춘다.
-- 파일명은 `%Y%m%d_%H%M%S.<extension>`으로 저장한다. 파일명 오름차순이 GIF 프레임 순서다.
+- 캡처 시각은 상대 대기 시간이 아닌 시스템 시계의 60초(디버그), 15분 또는 30분 경계에 맞춘다.
+- 스크린샷 파일명은 24시간 기준 `HHMM.<extension>`으로 저장한다. 파일명 오름차순이 GIF 프레임 순서다.
 - 기능은 실제 사용에서 필요성이 확인될 때만 다음 버전에 추가한다.
 
 ## 저장 포맷 및 기본 저장 위치
@@ -39,11 +39,10 @@
 
 ```text
 <storage_root>/
-└─ YYYY-MM-DD/
-   └─ HHmm/
-      ├─ screenshots/
-      │  └─ YYYYMMDD_HHMMSS.<extension>
-      └─ YYYYMMDD_HHmm-HHmm.gif
+└─ YYMMDD[-NN]/
+   ├─ Screenshot/
+   │  └─ HHMM.<extension>
+   └─ Diary_HHMM-HHMM.gif
 ```
 
 ## 초기 설정값과 변수화 목록
@@ -52,7 +51,7 @@
 
 | 설정 키 | v0.1 값 | 사용자 설정 도입 | 용도 |
 |---|---|---|---|
-| `capture_interval_minutes` | `15` 또는 `30` | v0.1 | 캡처 시계 경계 단위 |
+| `capture_interval_seconds` | `60`, `900`, `1800` | v0.1 | 60초 디버그 및 15/30분 캡처 경계 단위 |
 | `storage_root` | Pictures/WorkDiary | v0.2 | 세션과 결과물의 최상위 저장 경로 |
 | `capture_format` | `png` | v0.3 | `png`, `jpeg`, `webp` 중 원본 캡처 포맷 |
 | `jpeg_quality` | `90` | v0.3 | JPEG 선택 시 손실 압축 품질 |
@@ -74,7 +73,7 @@
 ### 포함 기능
 
 - PySide6 단일 창 UI
-  - Capture Interval: `15 min`, `30 min`
+  - 캡처 간격: `60초 (디버그)`, `15분`, `30분`
   - Status
   - Captures count
   - Next Capture time
@@ -83,6 +82,7 @@
 - 세션 상태 전이
   - `IDLE → RECORDING → ENCODING → IDLE`
 - Start 시 다음 시스템 시계 경계 계산
+  - 60초: 매분 `:00`
   - 15분: 매시 `:00`, `:15`, `:30`, `:45`
   - 30분: 매시 `:00`, `:30`
   - 예: 19:07에 15분 모드로 시작하면 첫 캡처는 19:15
@@ -91,11 +91,10 @@
 
   ```text
   <storage_root>/
-  └─ YYYY-MM-DD/
-     └─ HHmm/
-        ├─ screenshots/
-        │  └─ YYYYMMDD_HHMMSS.png
-        └─ YYYYMMDD_HHmm-HHmm.gif
+  └─ YYMMDD[-NN]/
+     ├─ Screenshot/
+     │  └─ HHMM.png
+     └─ Diary_HHMM-HHMM.gif
   ```
 
 - Finish 시 PNG 파일을 파일명 기준으로 정렬하여 단일 Animated GIF 생성
@@ -117,8 +116,8 @@
 
 ### 완료 기준
 
-- 15분 및 30분 모드의 다음 캡처시각 계산이 정확하다.
-- 캡처 이미지가 세션의 `screenshots` 폴더에 즉시 저장된다.
+- 60초, 15분 및 30분 모드의 다음 캡처시각 계산이 정확하다.
+- 캡처 이미지가 세션의 `Screenshot` 폴더에 즉시 저장된다.
 - Finish 후 생성된 GIF의 프레임 순서와 PNG 파일명 정렬 순서가 일치한다.
 - 정상 완료 시 결과 폴더가 열린다.
 

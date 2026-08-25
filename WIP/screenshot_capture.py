@@ -9,7 +9,6 @@ import mss
 from mss.exception import ScreenShotError
 from PIL import Image
 
-
 class ScreenshotCaptureError(RuntimeError):
     """화면 캡처 또는 이미지 저장 실패를 호출자에게 일관되게 전달한다."""
 
@@ -20,8 +19,7 @@ class ScreenshotCapture:
 
         captured_at = captured_at or datetime.now()
         output_directory.mkdir(parents=True, exist_ok=True)
-        filename = captured_at.strftime("%Y%m%d_%H%M%S.png")
-        output_path = output_directory / filename
+        output_path = output_directory / captured_at.strftime("%H%M.png")
 
         try:
             with mss.mss() as screen_capture:
@@ -30,8 +28,8 @@ class ScreenshotCapture:
                 image = Image.frombytes("RGB", raw_image.size, raw_image.rgb)
                 image.save(output_path, format="PNG")
         except (OSError, ScreenShotError) as error:
-            raise ScreenshotCaptureError(f"Screen capture failed: {error}") from error
+            raise ScreenshotCaptureError(f"화면 캡처 실패: {error}") from error
 
         if not output_path.is_file():
-            raise ScreenshotCaptureError(f"Screenshot was not saved: {output_path}")
+            raise ScreenshotCaptureError(f"스크린샷이 저장되지 않았습니다: {output_path}")
         return output_path

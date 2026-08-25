@@ -7,15 +7,23 @@ from capture_scheduler import next_capture_time
 class NextCaptureTimeTests(TestCase):
     def test_fifteen_minute_boundary(self) -> None:
         now = datetime(2026, 8, 25, 19, 7, 12)
-        self.assertEqual(next_capture_time(now, 15), datetime(2026, 8, 25, 19, 15))
+        self.assertEqual(next_capture_time(now, 15 * 60), datetime(2026, 8, 25, 19, 15))
 
     def test_exact_boundary_moves_to_next_boundary(self) -> None:
         now = datetime(2026, 8, 25, 19, 15)
-        self.assertEqual(next_capture_time(now, 15), datetime(2026, 8, 25, 19, 30))
+        self.assertEqual(next_capture_time(now, 15 * 60), datetime(2026, 8, 25, 19, 30))
 
     def test_thirty_minute_hour_rollover(self) -> None:
         now = datetime(2026, 8, 25, 19, 45)
-        self.assertEqual(next_capture_time(now, 30), datetime(2026, 8, 25, 20, 0))
+        self.assertEqual(next_capture_time(now, 30 * 60), datetime(2026, 8, 25, 20, 0))
+
+    def test_sixty_second_boundary(self) -> None:
+        now = datetime(2026, 8, 25, 19, 7, 12)
+        self.assertEqual(next_capture_time(now, 60), datetime(2026, 8, 25, 19, 8, 0))
+
+    def test_exact_sixty_second_boundary_moves_forward(self) -> None:
+        now = datetime(2026, 8, 25, 19, 7, 0)
+        self.assertEqual(next_capture_time(now, 60), datetime(2026, 8, 25, 19, 8, 0))
 
     def test_rejects_unsupported_interval(self) -> None:
         with self.assertRaises(ValueError):
