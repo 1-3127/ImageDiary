@@ -7,8 +7,7 @@ from pathlib import Path
 
 from PIL import Image
 
-
-SUPPORTED_IMAGE_SUFFIXES = {".png", ".webp", ".jpg", ".jpeg"}
+from image_order import sorted_image_paths
 
 
 class GifBuilder:
@@ -20,11 +19,7 @@ class GifBuilder:
         loop: int,
         progress_callback: Callable[[int, int], None] | None = None,
     ) -> int:
-        image_paths = sorted(
-            path
-            for path in screenshots_directory.iterdir()
-            if path.is_file() and path.suffix.lower() in SUPPORTED_IMAGE_SUFFIXES
-        )
+        image_paths = sorted_image_paths(screenshots_directory)
         if not image_paths:
             raise ValueError("No screenshots are available for GIF generation.")
 

@@ -10,14 +10,14 @@ v0.1 MVP의 Windows 실환경 검증을 완료했으며 v0.2를 개발 중입니
 - 10~30분 범위의 5분 단위 캡처 간격과 1분 디버그 모드
 - 시작 즉시 캡처 후 시스템 시계 경계 기반 스케줄링
 - 첫 이미지와 마지막 이미지 이름을 사용하는 GIF 파일명
-- timestamp PNG 즉시 저장
+- `001`, `002`, `003` 순번 이미지 즉시 저장
 - Finish 시 단일 GIF 생성
 - 완료 후 결과 폴더 열기
 - `C:\temp\workdiary` 내부 원본 기반 미완료 세션 복구
 - 사용자 지정 단일 저장 경로와 종료 시 Screenshot 전체 복사 토글
 - PNG/WebP/JPG 저장 포맷과 품질 설정
 - 항상 위에 고정, Windows 로그인 시작, GIF 진행 팝업
-- 최신 2개 세션을 제외한 내부 원본 휴지통 정리(사용자 저장 경로 제외)
+- 최근 수정 세션 2개 보호 및 나머지 7일 이상 내부 원본 자동 정리
 
 구현 계획은 [Plan/versioned_implementation_plan.md](Plan/versioned_implementation_plan.md)에서 확인할 수 있습니다.
 
@@ -34,6 +34,7 @@ ImageDiary/
    ├─ capture_scheduler.py
    ├─ screenshot_capture.py
    ├─ gif_builder.py
+   ├─ image_order.py
    ├─ file_exporter.py
    ├─ data_cleanup.py
    ├─ retention.py
@@ -65,7 +66,7 @@ python -m unittest discover -s tests -v
 python main.py
 ```
 
-내부 원본은 `C:\temp\workdiary`에 저장되며 기본 7일 동안 유지됩니다. GIF 복사본은 기본적으로 `%USERPROFILE%\Pictures\WorkDiary`에 저장되며, 설정 창에서 저장 경로와 종료 시 Screenshot 전체 복사 여부를 변경할 수 있습니다.
+내부 원본은 `C:\temp\workdiary`에 저장됩니다. 최근 수정 세션 2개는 항상 보호되며, 나머지는 마지막 활동 후 7일이 지나면 자동 정리됩니다. GIF 복사본은 기본적으로 `%USERPROFILE%\Pictures\WorkDiary`에 저장되며, 설정 창에서 저장 경로와 종료 시 Screenshot 전체 복사 여부를 변경할 수 있습니다.
 
 ## MVP 범위 제외
 

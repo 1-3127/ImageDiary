@@ -129,12 +129,14 @@ class SessionControllerTests(TestCase):
             )
             controller = SessionController(initial_settings)
             received_formats: list[str] = []
+            received_sequences: list[int] = []
 
             def create_test_capture(
                 output_directory: Path,
                 **options: object,
             ) -> Path:
                 received_formats.append(str(options["image_format"]))
+                received_sequences.append(int(options["sequence_number"]))
                 output_path = output_directory / "2030.png"
                 Image.new("RGB", (8, 8), "green").save(output_path)
                 return output_path
@@ -147,3 +149,4 @@ class SessionControllerTests(TestCase):
             controller.finish()
 
             self.assertEqual(received_formats, ["png"])
+            self.assertEqual(received_sequences, [1])

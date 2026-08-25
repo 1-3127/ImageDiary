@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest import TestCase
@@ -8,13 +9,15 @@ from gif_builder import GifBuilder
 
 
 class GifBuilderTests(TestCase):
-    def test_builds_frames_in_filename_order(self) -> None:
+    def test_builds_frames_in_modified_time_order(self) -> None:
         with TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)
             screenshots = root / "screenshots"
             screenshots.mkdir()
             Image.new("RGB", (8, 8), "blue").save(screenshots / "1930.png")
             Image.new("RGB", (8, 8), "red").save(screenshots / "1915.png")
+            os.utime(screenshots / "1930.png", (1, 1))
+            os.utime(screenshots / "1915.png", (2, 2))
             output = root / "diary.gif"
 
             frame_count = GifBuilder().build(screenshots, output, 500, 0)
@@ -23,9 +26,9 @@ class GifBuilderTests(TestCase):
             with Image.open(output) as gif:
                 self.assertEqual(gif.n_frames, 2)
                 gif.seek(0)
-                self.assertEqual(gif.convert("RGB").getpixel((0, 0)), (255, 0, 0))
-                gif.seek(1)
                 self.assertEqual(gif.convert("RGB").getpixel((0, 0)), (0, 0, 255))
+                gif.seek(1)
+                self.assertEqual(gif.convert("RGB").getpixel((0, 0)), (255, 0, 0))
 
     def test_rejects_empty_screenshot_directory(self) -> None:
         with TemporaryDirectory() as temporary_directory:

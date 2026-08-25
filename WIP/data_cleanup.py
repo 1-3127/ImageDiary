@@ -7,7 +7,7 @@ from pathlib import Path
 
 from send2trash import send2trash
 
-from retention import SESSION_DIRECTORY_PATTERN
+from retention import SESSION_DIRECTORY_PATTERN, session_last_modified_ns
 
 
 def find_cleanup_candidates(internal_root: Path, keep_count: int = 2) -> list[Path]:
@@ -23,7 +23,10 @@ def find_cleanup_candidates(internal_root: Path, keep_count: int = 2) -> list[Pa
         and not (hasattr(path, "is_junction") and path.is_junction())
         and SESSION_DIRECTORY_PATTERN.fullmatch(path.name)
     ]
-    sessions.sort(key=lambda path: (path.stat().st_mtime_ns, path.name), reverse=True)
+    sessions.sort(
+        key=lambda path: (session_last_modified_ns(path), path.name),
+        reverse=True,
+    )
     return sessions[keep_count:]
 
 

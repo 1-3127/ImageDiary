@@ -17,6 +17,9 @@ class SessionRecoveryTests(TestCase):
                 screenshot_directory = session / "Screenshot"
                 screenshot_directory.mkdir(parents=True)
                 (screenshot_directory / "2030.webp").write_bytes(b"image")
+            expected_start = datetime(2026, 8, 25, 20, 30)
+            latest_image = latest / "Screenshot" / "2030.webp"
+            os.utime(latest_image, (expected_start.timestamp(), expected_start.timestamp()))
             os.utime(older, (1, 1))
             os.utime(latest, (2, 2))
 
@@ -25,7 +28,7 @@ class SessionRecoveryTests(TestCase):
             self.assertIsNotNone(candidate)
             assert candidate is not None
             self.assertEqual(candidate.session_directory, latest)
-            self.assertEqual(candidate.started_at, datetime(2026, 8, 25, 20, 30))
+            self.assertEqual(candidate.started_at, expected_start)
 
     def test_latest_completed_session_suppresses_older_candidate(self) -> None:
         with TemporaryDirectory() as temporary_directory:

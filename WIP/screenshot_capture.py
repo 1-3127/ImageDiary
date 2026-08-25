@@ -1,4 +1,4 @@
-"""전체 가상 화면을 캡처하여 timestamp 파일명으로 즉시 저장한다."""
+"""전체 가상 화면을 캡처하여 세션 순번 파일명으로 즉시 저장한다."""
 
 from __future__ import annotations
 
@@ -18,20 +18,22 @@ class ScreenshotCapture:
         self,
         output_directory: Path,
         captured_at: datetime | None = None,
+        sequence_number: int = 1,
         image_format: str = "png",
         image_quality: int = 85,
     ) -> Path:
         """선택한 포맷으로 한 장을 저장하고 실제 절대 경로를 반환한다."""
 
-        captured_at = captured_at or datetime.now()
         output_directory.mkdir(parents=True, exist_ok=True)
         normalized_format = image_format.lower()
+        if sequence_number < 1:
+            raise ScreenshotCaptureError("캡처 순번은 1 이상이어야 합니다.")
         if normalized_format not in {"png", "webp", "jpg"}:
             raise ScreenshotCaptureError(f"지원하지 않는 이미지 포맷: {image_format}")
-        output_path = output_directory / captured_at.strftime(f"%H%M.{normalized_format}")
+        output_path = output_directory / f"{sequence_number:03d}.{normalized_format}"
         if output_path.exists():
             raise ScreenshotCaptureError(
-                f"같은 분의 스크린샷이 이미 존재합니다: {output_path.name}"
+                f"같은 순번의 스크린샷이 이미 존재합니다: {output_path.name}"
             )
 
         try:

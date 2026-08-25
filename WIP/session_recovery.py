@@ -6,8 +6,8 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
-from gif_builder import SUPPORTED_IMAGE_SUFFIXES
-from retention import SESSION_DIRECTORY_PATTERN
+from image_order import sorted_image_paths
+from retention import SESSION_DIRECTORY_PATTERN, session_last_modified_ns
 
 
 @dataclass(frozen=True)
@@ -34,18 +34,12 @@ def find_latest_incomplete_session(internal_root: Path) -> RecoveryCandidate | N
     if not sessions:
         return None
 
-    latest = max(sessions, key=lambda path: (path.stat().st_mtime_ns, path.name))
+    latest = max(sessions, key=lambda path: (session_last_modified_ns(path), path.name))
     screenshots = latest / "Screenshot"
     if not screenshots.is_dir() or any(latest.glob("Diary_*.gif")):
         return None
 
-    image_paths = tuple(
-        sorted(
-            path
-            for path in screenshots.iterdir()
-            if path.is_file() and path.suffix.lower() in SUPPORTED_IMAGE_SUFFIXES
-        )
-    )
+    image_paths = tuple(sorted_image_paths(screenshots))
     if not image_paths:
         return None
 
@@ -54,11 +48,8 @@ def find_latest_incomplete_session(internal_root: Path) -> RecoveryCandidate | N
 
 
 def infer_session_start(session_directory: Path, image_paths: tuple[Path, ...]) -> datetime:
-    """YYMMDD 세션명과 최초 HHMM 이미지명으로 복구 시작 시각을 추론한다."""
+    """첫 이미지 수정 시각을 우선하고 세션 폴더 시각을 대체값으로 사용한다."""
 
-    date_text = session_directory.name[:6]
-    time_text = image_paths[0].stem[:4]
-    try:
-        return datetime.strptime(date_text + time_text, "%y%m%d%H%M")
-    except ValueError:
-        return datetime.fromtimestamp(session_directory.stat().st_mtime)
+    if image_paths:
+        return datetime.fromtimestamp(image_paths[0].stat().st_mtime)
+    return datetime.fromtimestamp(session_directory.stat().st_mtime)
