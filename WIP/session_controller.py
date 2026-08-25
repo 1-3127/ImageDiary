@@ -10,7 +10,7 @@ from PySide6.QtCore import QObject, Signal
 
 from capture_scheduler import CaptureScheduler
 from gif_builder import GifBuilder
-from screenshot_capture import ScreenshotCapture
+from screenshot_capture import ScreenshotCapture, ScreenshotCaptureError
 from settings import AppSettings
 from storage import SessionStorage
 
@@ -105,7 +105,7 @@ class SessionController(QObject):
             self._capture_count += 1
             self.capture_count_changed.emit(self._capture_count)
             self.status_changed.emit("Recording")
-        except OSError as error:
+        except ScreenshotCaptureError as error:
             self.status_changed.emit(f"Capture failed: {error}")
 
     def _set_state(self, state: SessionState) -> None:

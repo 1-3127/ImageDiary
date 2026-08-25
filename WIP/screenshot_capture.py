@@ -6,7 +6,12 @@ from datetime import datetime
 from pathlib import Path
 
 import mss
+from mss.exception import ScreenShotError
 from PIL import Image
+
+
+class ScreenshotCaptureError(RuntimeError):
+    """화면 캡처 또는 이미지 저장 실패를 호출자에게 일관되게 전달한다."""
 
 
 class ScreenshotCapture:
@@ -18,12 +23,15 @@ class ScreenshotCapture:
         filename = captured_at.strftime("%Y%m%d_%H%M%S.png")
         output_path = output_directory / filename
 
-        with mss.mss() as screen_capture:
-            virtual_screen = screen_capture.monitors[0]
-            raw_image = screen_capture.grab(virtual_screen)
-            image = Image.frombytes("RGB", raw_image.size, raw_image.rgb)
-            image.save(output_path, format="PNG")
+        try:
+            with mss.mss() as screen_capture:
+                virtual_screen = screen_capture.monitors[0]
+                raw_image = screen_capture.grab(virtual_screen)
+                image = Image.frombytes("RGB", raw_image.size, raw_image.rgb)
+                image.save(output_path, format="PNG")
+        except (OSError, ScreenShotError) as error:
+            raise ScreenshotCaptureError(f"Screen capture failed: {error}") from error
 
         if not output_path.is_file():
-            raise OSError(f"Screenshot was not saved: {output_path}")
+            raise ScreenshotCaptureError(f"Screenshot was not saved: {output_path}")
         return output_path
