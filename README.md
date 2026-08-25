@@ -71,3 +71,14 @@ python main.py
 ## MVP 범위 제외
 
 멀티 모니터 선택, Preview, DB 및 AI 분석은 후속 버전에서 검토합니다.
+
+## Windows 패키징
+
+PyInstaller 빌드 의존성을 설치한 뒤 저장소 root에서 실행합니다.
+
+```powershell
+.\WIP\.venv\Scripts\python.exe -m pip install -r .\WIP\requirements-build.txt
+.\WIP\.venv\Scripts\python.exe -m PyInstaller --clean --noconfirm --distpath .\Release --workpath .\build\pyinstaller .\packaging\ImageDiary.spec
+```
+
+결과물은 `Release\ImageDiary-v0.2\ImageDiary.exe`에 생성됩니다. 1분 디버그 옵션도 v0.2 패키지에 포함됩니다.

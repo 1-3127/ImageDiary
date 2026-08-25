@@ -16,6 +16,8 @@ htmlcov/
 # Build outputs
 build/
 dist/
+/Release/
+/build/pyinstaller/
 *.egg-info/
 
 # IDE and OS files
