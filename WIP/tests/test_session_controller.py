@@ -3,6 +3,8 @@ from tempfile import TemporaryDirectory
 from unittest import TestCase
 from unittest.mock import Mock
 
+from PIL import Image
+
 from session_controller import SessionController, SessionState
 from settings import AppSettings
 
@@ -20,3 +22,26 @@ class SessionControllerTests(TestCase):
 
             self.assertIs(controller.state, SessionState.IDLE)
             self.assertEqual(statuses, ["Session start failed: disk unavailable"])
+
+    def test_complete_session_builds_gif_and_returns_to_idle(self) -> None:
+        with TemporaryDirectory() as temporary_directory:
+            controller = SessionController(AppSettings(Path(temporary_directory)))
+
+            def create_test_capture(output_directory: Path) -> Path:
+                output_directory.mkdir(parents=True, exist_ok=True)
+                output_path = output_directory / "20260825_191500.png"
+                Image.new("RGB", (8, 8), "green").save(output_path)
+                return output_path
+
+            controller._screenshot_capture.capture = create_test_capture
+            outputs: list[Path] = []
+            controller.output_ready.connect(outputs.append)
+
+            controller.start(15)
+            controller._capture_screenshot()
+            controller.finish()
+
+            self.assertIs(controller.state, SessionState.IDLE)
+            self.assertEqual(len(outputs), 1)
+            self.assertEqual(len(list(outputs[0].glob("*.gif"))), 1)
+            self.assertEqual(len(list((outputs[0] / "screenshots").glob("*.png"))), 1)
