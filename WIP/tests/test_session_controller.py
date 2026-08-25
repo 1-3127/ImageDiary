@@ -12,7 +12,13 @@ from settings import AppSettings
 class SessionControllerTests(TestCase):
     def test_storage_failure_keeps_session_idle(self) -> None:
         with TemporaryDirectory() as temporary_directory:
-            controller = SessionController(AppSettings(Path(temporary_directory)))
+            controller = SessionController(
+                AppSettings(
+                    Path(temporary_directory),
+                    Path(temporary_directory),
+                    internal_storage_root=Path(temporary_directory),
+                )
+            )
             controller._storage = Mock()
             controller._storage.create_session_directory.side_effect = OSError("disk unavailable")
             statuses: list[str] = []
@@ -25,7 +31,13 @@ class SessionControllerTests(TestCase):
 
     def test_complete_session_builds_gif_and_returns_to_idle(self) -> None:
         with TemporaryDirectory() as temporary_directory:
-            controller = SessionController(AppSettings(Path(temporary_directory)))
+            controller = SessionController(
+                AppSettings(
+                    Path(temporary_directory),
+                    Path(temporary_directory),
+                    internal_storage_root=Path(temporary_directory),
+                )
+            )
 
             def create_test_capture(output_directory: Path) -> Path:
                 output_directory.mkdir(parents=True, exist_ok=True)
