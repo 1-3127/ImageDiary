@@ -13,7 +13,7 @@ v0.1 MVP의 Windows 실환경 검증을 완료했으며 v0.2를 개발 중입니
 - Finish 시 단일 GIF 생성
 - 완료 후 결과 폴더 열기
 - `C:\temp\workdiary` 내부 원본 기반 미완료 세션 복구
-- 사용자 지정 단일 Screenshot/GIF 복사 경로
+- 사용자 지정 단일 저장 경로와 종료 시 Screenshot 전체 복사 토글
 - PNG/WebP/JPG 저장 포맷과 품질 설정
 - 항상 위에 고정, Windows 로그인 시작, GIF 진행 팝업
 - 최신 2개 세션을 제외한 사용자 데이터 휴지통 정리
@@ -64,7 +64,7 @@ python -m unittest discover -s tests -v
 python main.py
 ```
 
-내부 원본은 `C:\temp\workdiary`에 저장되며 기본 7일 동안 유지됩니다. 사용자에게 제공되는 Screenshot과 GIF 복사본은 기본적으로 `%USERPROFILE%\Pictures\WorkDiary`에 함께 저장되며 설정 창에서 경로를 변경할 수 있습니다.
+내부 원본은 `C:\temp\workdiary`에 저장되며 기본 7일 동안 유지됩니다. GIF 복사본은 기본적으로 `%USERPROFILE%\Pictures\WorkDiary`에 저장되며, 설정 창에서 저장 경로와 종료 시 Screenshot 전체 복사 여부를 변경할 수 있습니다.
 
 ## MVP 범위 제외
 

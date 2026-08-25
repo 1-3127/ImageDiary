@@ -24,6 +24,7 @@ class SettingsRepositoryTests(TestCase):
                 run_at_login=True,
                 always_on_top=True,
                 internal_retention_days=7,
+                export_screenshots_on_finish=False,
             )
 
             repository.save(expected)

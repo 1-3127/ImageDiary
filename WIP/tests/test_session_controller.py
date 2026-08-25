@@ -92,6 +92,33 @@ class SessionControllerTests(TestCase):
             exported_session = root / "export" / "260825"
             self.assertEqual(len(list(exported_session.glob("Diary_*.gif"))), 1)
 
+    def test_can_export_only_gif_on_finish(self) -> None:
+        with TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            controller = SessionController(
+                AppSettings(
+                    root / "export",
+                    export_screenshots_on_finish=False,
+                    internal_storage_root=root / "internal",
+                )
+            )
+
+            def create_test_capture(output_directory: Path, **_options: object) -> Path:
+                output_path = output_directory / "1915.png"
+                Image.new("RGB", (8, 8), "green").save(output_path)
+                return output_path
+
+            controller._screenshot_capture.capture = create_test_capture
+            outputs: list[Path] = []
+            controller.output_ready.connect(outputs.append)
+
+            controller.start()
+            controller._capture_screenshot()
+            controller.finish()
+
+            self.assertEqual(len(list(outputs[0].glob("Diary_*.gif"))), 1)
+            self.assertFalse((outputs[0] / "Screenshot").exists())
+
     def test_settings_changed_during_session_apply_next_time(self) -> None:
         with TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)

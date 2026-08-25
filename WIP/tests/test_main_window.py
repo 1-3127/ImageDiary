@@ -58,7 +58,7 @@ class MainWindowTests(TestCase):
 
             self.assertEqual(
                 window._session_status._capture_overview.text(),
-                "2026-08-25 21:30:00 (3)",
+                "다음 캡처 21:30 (3번째)",
             )
             window.close()
 
@@ -66,6 +66,27 @@ class MainWindowTests(TestCase):
         dialog = SettingsDialog(default_settings())
 
         self.assertEqual(dialog._export_path.text(), str(default_settings().export_root))
-        self.assertEqual(dialog._interval.count(), 3)
-        self.assertEqual(dialog._interval.currentData(), 15 * 60)
+        self.assertEqual(len(dialog._interval_buttons), 3)
+        self.assertTrue(dialog._interval_buttons[15 * 60].isChecked())
+        self.assertTrue(dialog._export_screenshots.isChecked())
         dialog.close()
+
+    def test_capture_overview_shows_seconds_in_debug_mode(self) -> None:
+        with TemporaryDirectory() as temporary_directory:
+            repository = SettingsRepository(
+                QSettings(
+                    str(Path(temporary_directory) / "settings.ini"),
+                    QSettings.Format.IniFormat,
+                )
+            )
+            window = MainWindow(repository, Mock())
+            window._session_status.set_capture_interval(60)
+            window._session_status.set_next_capture(
+                datetime(2026, 8, 25, 21, 30, 15)
+            )
+
+            self.assertEqual(
+                window._session_status._capture_overview.text(),
+                "다음 캡처 21:30:15 (1번째)",
+            )
+            window.close()

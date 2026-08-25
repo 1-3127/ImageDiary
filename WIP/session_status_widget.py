@@ -13,6 +13,7 @@ class SessionStatusWidget(QWidget):
         layout = QFormLayout(self)
         self._status = QLabel("대기", self)
         self._capture_count = 0
+        self._capture_interval_seconds = 15 * 60
         self._next_capture_time: datetime | None = None
         self._capture_overview = QLabel("-", self)
         layout.addRow("상태:", self._status)
@@ -25,6 +26,10 @@ class SessionStatusWidget(QWidget):
         self._capture_count = count
         self._refresh_capture_overview()
 
+    def set_capture_interval(self, seconds: int) -> None:
+        self._capture_interval_seconds = seconds
+        self._refresh_capture_overview()
+
     def set_next_capture(self, capture_time: datetime | None) -> None:
         self._next_capture_time = capture_time
         self._refresh_capture_overview()
@@ -34,6 +39,8 @@ class SessionStatusWidget(QWidget):
             self._capture_overview.setText("-")
             return
         next_number = self._capture_count + 1
-        self._capture_overview.setText(
-            f"{self._next_capture_time:%Y-%m-%d %H:%M:%S} ({next_number})"
+        time_format = (
+            "%H:%M:%S" if self._capture_interval_seconds == 60 else "%H:%M"
         )
+        next_time = self._next_capture_time.strftime(time_format)
+        self._capture_overview.setText(f"다음 캡처 {next_time} ({next_number}번째)")

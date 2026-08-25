@@ -32,6 +32,7 @@ class AppSettings:
     gif_frame_duration_ms: int = 500
     gif_loop: int = 0
     open_output_on_finish: bool = True
+    export_screenshots_on_finish: bool = True
     internal_storage_root: Path = INTERNAL_STORAGE_ROOT
 
     def __post_init__(self) -> None:

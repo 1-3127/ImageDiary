@@ -64,6 +64,12 @@ class SettingsRepository:
                     defaults.open_output_on_finish,
                 )
             ),
+            export_screenshots_on_finish=self._as_bool(
+                self._backend.value(
+                    "export/screenshots_on_finish",
+                    defaults.export_screenshots_on_finish,
+                )
+            ),
         )
 
     def save(self, settings: AppSettings) -> None:
@@ -82,6 +88,9 @@ class SettingsRepository:
         self._backend.setValue("gif/loop", settings.gif_loop)
         self._backend.setValue(
             "window/open_output_on_finish", settings.open_output_on_finish
+        )
+        self._backend.setValue(
+            "export/screenshots_on_finish", settings.export_screenshots_on_finish
         )
         self._backend.sync()
 

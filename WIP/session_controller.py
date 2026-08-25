@@ -148,13 +148,14 @@ class SessionController(QObject):
                 self._session_settings.gif_loop,
                 self.encoding_progress.emit,
             )
-            for screenshot in self._screenshots_directory.iterdir():
-                if screenshot.is_file():
-                    self._file_exporter.copy_screenshot(
-                        screenshot,
-                        self._session_settings.export_root,
-                        self._session_directory.name,
-                    )
+            if self._session_settings.export_screenshots_on_finish:
+                for screenshot in self._screenshots_directory.iterdir():
+                    if screenshot.is_file():
+                        self._file_exporter.copy_screenshot(
+                            screenshot,
+                            self._session_settings.export_root,
+                            self._session_directory.name,
+                        )
             exported_gif = self._file_exporter.copy_gif(
                 gif_path,
                 self._session_settings.export_root,
@@ -180,25 +181,16 @@ class SessionController(QObject):
         assert self._session_directory is not None
         assert self._session_settings is not None
         try:
-            screenshot = self._screenshot_capture.capture(
+            self._screenshot_capture.capture(
                 self._screenshots_directory,
                 image_format=self._session_settings.capture_format,
                 image_quality=self._session_settings.image_quality,
-            )
-            self._file_exporter.copy_screenshot(
-                screenshot,
-                self._session_settings.export_root,
-                self._session_directory.name,
             )
             self._capture_count += 1
             self.capture_count_changed.emit(self._capture_count)
             self.status_changed.emit("기록 중")
         except ScreenshotCaptureError as error:
             self.status_changed.emit(f"화면 캡처 실패: {error}")
-        except FileExportError as error:
-            self._capture_count += 1
-            self.capture_count_changed.emit(self._capture_count)
-            self.status_changed.emit(f"캡처 저장 완료, 사용자 경로 복사 실패: {error}")
 
     def _set_state(self, state: SessionState) -> None:
         self._state = state

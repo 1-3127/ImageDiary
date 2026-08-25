@@ -13,11 +13,13 @@ from PySide6.QtWidgets import (
     QDialogButtonBox,
     QFileDialog,
     QFormLayout,
+    QGroupBox,
     QHBoxLayout,
     QLabel,
     QLineEdit,
     QMessageBox,
     QPushButton,
+    QRadioButton,
     QSpinBox,
     QVBoxLayout,
     QWidget,
@@ -42,15 +44,22 @@ class SettingsDialog(QDialog):
         form = QFormLayout()
 
         self._export_path = QLineEdit(str(self._settings.export_root), self)
-        form.addRow("스크린샷 저장 경로:", self._path_row(self._export_path, "작업 일기"))
+        form.addRow("저장 경로:", self._path_row(self._export_path, "작업 일기"))
 
-        self._interval = QComboBox(self)
-        self._interval.addItem("60초 (디버그)", 60)
-        self._interval.addItem("15분", 15 * 60)
-        self._interval.addItem("30분", 30 * 60)
-        interval_index = self._interval.findData(self._settings.capture_interval_seconds)
-        self._interval.setCurrentIndex(max(0, interval_index))
-        form.addRow("캡처 간격:", self._interval)
+        self._interval_buttons: dict[int, QRadioButton] = {}
+        interval_group = QGroupBox(self)
+        interval_layout = QHBoxLayout(interval_group)
+        interval_options = (
+            ("60초 (디버그)", 60),
+            ("15분", 15 * 60),
+            ("30분", 30 * 60),
+        )
+        for text, seconds in interval_options:
+            button = QRadioButton(text, interval_group)
+            button.setChecked(seconds == self._settings.capture_interval_seconds)
+            self._interval_buttons[seconds] = button
+            interval_layout.addWidget(button)
+        form.addRow("캡처 간격:", interval_group)
 
         self._format = QComboBox(self)
         self._format.addItems(list(SUPPORTED_CAPTURE_FORMATS))
@@ -66,6 +75,15 @@ class SettingsDialog(QDialog):
         self._run_at_login = QCheckBox("Windows 로그인 시 ImageDiary 시작", self)
         self._run_at_login.setChecked(self._settings.run_at_login)
         form.addRow("", self._run_at_login)
+
+        self._export_screenshots = QCheckBox("종료 시 이미지 전체 저장하기", self)
+        self._export_screenshots.setChecked(
+            self._settings.export_screenshots_on_finish
+        )
+        self._export_screenshots.setToolTip(
+            "끄면 사용자 저장 경로에는 GIF만 저장됩니다. 내부 원본은 유지됩니다."
+        )
+        form.addRow("", self._export_screenshots)
 
         note = QLabel("진행 중 변경한 설정은 다음 세션부터 적용됩니다.", self)
         note.setWordWrap(True)
@@ -115,13 +133,20 @@ class SettingsDialog(QDialog):
         updated = replace(
             self._settings,
             export_root=Path(export_path),
-            capture_interval_seconds=int(self._interval.currentData()),
+            capture_interval_seconds=self._selected_interval(),
             capture_format=self._format.currentText(),
             image_quality=self._quality.value(),
             run_at_login=self._run_at_login.isChecked(),
+            export_screenshots_on_finish=self._export_screenshots.isChecked(),
         )
         self.settings_saved.emit(updated)
         self.accept()
+
+    def _selected_interval(self) -> int:
+        for seconds, button in self._interval_buttons.items():
+            if button.isChecked():
+                return seconds
+        return self._settings.capture_interval_seconds
 
     def _cleanup_data(self) -> None:
         export_root = Path(self._export_path.text().strip())
@@ -130,15 +155,21 @@ class SettingsDialog(QDialog):
             QMessageBox.information(self, "데이터 정리", "정리할 세션 폴더가 없습니다.")
             return
 
-        answer = QMessageBox.warning(
-            self,
-            "데이터 정리 주의",
-            "가장 최근 세션과 바로 이전 세션을 제외한 모든 세션 폴더를 정리합니다.\n\n"
-            "정리된 폴더는 휴지통으로 버려집니다.",
-            QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel,
-            QMessageBox.StandardButton.Cancel,
+        confirmation = QMessageBox(self)
+        confirmation.setIcon(QMessageBox.Icon.Warning)
+        confirmation.setWindowTitle("데이터 정리 확인")
+        confirmation.setText("데이터를 정리하시겠습니까?")
+        confirmation.setInformativeText(
+            "가장 최근 세션 2개는 남기고, 그보다 오래된 모든 세션 폴더를 "
+            "휴지통으로 이동합니다.\n\n휴지통에서 복구하거나 영구 삭제할 수 있습니다."
         )
-        if answer != QMessageBox.StandardButton.Ok:
+        cleanup = confirmation.addButton(
+            "데이터 정리", QMessageBox.ButtonRole.DestructiveRole
+        )
+        confirmation.addButton("취소", QMessageBox.ButtonRole.RejectRole)
+        confirmation.setDefaultButton(cleanup)
+        confirmation.exec()
+        if confirmation.clickedButton() is not cleanup:
             return
 
         try:
