@@ -1,4 +1,5 @@
 from datetime import datetime
+from dataclasses import replace
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest import TestCase
@@ -93,3 +94,34 @@ class SessionControllerTests(TestCase):
             self.assertIs(controller.state, SessionState.IDLE)
             exported_session = root / "gif-export" / "260825"
             self.assertEqual(len(list(exported_session.glob("Diary_*.gif"))), 1)
+
+    def test_settings_changed_during_session_apply_next_time(self) -> None:
+        with TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            initial_settings = AppSettings(
+                root / "screenshot-export",
+                root / "gif-export",
+                capture_format="png",
+                internal_storage_root=root / "internal",
+            )
+            controller = SessionController(initial_settings)
+            received_formats: list[str] = []
+
+            def create_test_capture(
+                output_directory: Path,
+                **options: object,
+            ) -> Path:
+                received_formats.append(str(options["image_format"]))
+                output_path = output_directory / "2030.png"
+                Image.new("RGB", (8, 8), "green").save(output_path)
+                return output_path
+
+            controller._screenshot_capture.capture = create_test_capture
+            controller.start(15 * 60)
+            controller.update_settings(
+                replace(initial_settings, capture_format="jpg")
+            )
+            controller._capture_screenshot()
+            controller.finish()
+
+            self.assertEqual(received_formats, ["png"])

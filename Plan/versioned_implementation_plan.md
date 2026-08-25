@@ -4,7 +4,7 @@
 
 - v0.1: 구현 및 실환경 검증 완료
 - 검증 완료: `YYMMDD-NN` 세션 폴더, 스크린샷 캡처, Animated GIF 생성·재생, 결과 폴더 자동 열기, UTF-8 한글 UI
-- v0.2: 구현 시작
+- v0.2: 기능 구현 및 자동 검증 완료, Windows 실환경 검증 대기
 
 ## 프로젝트 목적
 
@@ -133,6 +133,15 @@ WIP/
 ├─ capture_scheduler.py    # 다음 시계 경계 계산과 QTimer
 ├─ screenshot_capture.py   # mss 캡처 및 파일 저장
 ├─ gif_builder.py          # 정렬, 크기 통일, GIF 인코딩
+├─ file_exporter.py        # 내부 원본을 사용자 경로로 복사
+├─ retention.py            # 내부 원본 보존기간 정리
+├─ session_recovery.py     # 최신 미완료 세션 판정
+├─ recovery_dialog.py      # 복구/마치기 선택 UI
+├─ gif_progress_dialog.py  # GIF 진행 팝업
+├─ session_status_widget.py # 세션 상태 표시 UI
+├─ settings_dialog.py      # 사용자 설정 UI
+├─ settings_repository.py  # 설정 영구 저장
+├─ startup_manager.py      # Windows 로그인 시작 등록
 ├─ storage.py              # 세션 폴더와 결과 경로 생성
 ├─ settings.py             # 설정값과 경로 계산
 ├─ tests/                  # 경계시각, 저장 경로, GIF 순서 자동 검증

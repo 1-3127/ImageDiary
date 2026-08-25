@@ -4,7 +4,7 @@ ImageDiary는 작업 세션 동안 시스템 시계의 15분 또는 30분 경계
 
 ## 현재 상태
 
-v0.1 MVP 구현과 Windows 실환경 검증을 완료했습니다.
+v0.1 MVP의 Windows 실환경 검증을 완료했으며 v0.2를 개발 중입니다.
 
 - PySide6 기반 최소 UI
 - 60초 디버그 및 15분/30분 캡처 간격
@@ -12,6 +12,10 @@ v0.1 MVP 구현과 Windows 실환경 검증을 완료했습니다.
 - timestamp PNG 즉시 저장
 - Finish 시 단일 GIF 생성
 - 완료 후 결과 폴더 열기
+- `C:\temp\workdiary` 내부 원본 기반 미완료 세션 복구
+- 사용자 지정 Screenshot/GIF 복사 경로
+- PNG/WebP/JPG 저장 포맷과 품질 설정
+- 항상 위에 고정, Windows 로그인 시작, GIF 진행 팝업
 
 구현 계획은 [Plan/versioned_implementation_plan.md](Plan/versioned_implementation_plan.md)에서 확인할 수 있습니다.
 
@@ -28,6 +32,15 @@ ImageDiary/
    ├─ capture_scheduler.py
    ├─ screenshot_capture.py
    ├─ gif_builder.py
+   ├─ file_exporter.py
+   ├─ retention.py
+   ├─ session_recovery.py
+   ├─ recovery_dialog.py
+   ├─ gif_progress_dialog.py
+   ├─ session_status_widget.py
+   ├─ settings_dialog.py
+   ├─ settings_repository.py
+   ├─ startup_manager.py
    ├─ storage.py
    ├─ settings.py
    ├─ tests/
@@ -49,8 +62,8 @@ python -m unittest discover -s tests -v
 python main.py
 ```
 
-기본 결과 저장 위치는 `%USERPROFILE%\Pictures\WorkDiary`입니다. 세션은 `YYMMDD[-NN]` 폴더, 스크린샷은 그 아래 `Screenshot` 폴더에 저장됩니다. Pictures 폴더를 찾을 수 없으면 `%USERPROFILE%\WorkDiary`를 사용합니다.
+내부 원본은 `C:\temp\workdiary`에 저장되며 기본 7일 동안 유지됩니다. 사용자에게 제공되는 Screenshot과 GIF 복사본은 기본적으로 `%USERPROFILE%\Pictures\WorkDiary`에 저장되며 설정 창에서 각각 변경할 수 있습니다.
 
 ## MVP 범위 제외
 
-Pause/Resume, 캡처 포맷 선택, 저장 경로 UI, 멀티 모니터 선택, Preview, DB 및 AI 분석은 후속 버전에서 검토합니다.
+멀티 모니터 선택, Preview, DB 및 AI 분석은 후속 버전에서 검토합니다.
