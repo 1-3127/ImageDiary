@@ -1,7 +1,11 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from unittest import TestCase
 
-from capture_scheduler import next_capture_time
+from capture_scheduler import (
+    is_capture_due,
+    next_capture_time,
+    timer_delay_milliseconds,
+)
 
 
 class NextCaptureTimeTests(TestCase):
@@ -28,3 +32,15 @@ class NextCaptureTimeTests(TestCase):
     def test_rejects_unsupported_interval(self) -> None:
         with self.assertRaises(ValueError):
             next_capture_time(datetime(2026, 8, 25, 19, 7), 20)
+
+    def test_fractional_timer_delay_is_rounded_up(self) -> None:
+        now = datetime(2026, 8, 25, 19, 7)
+        capture_time = now + timedelta(microseconds=1001)
+        self.assertEqual(timer_delay_milliseconds(now, capture_time), 2)
+
+    def test_capture_is_not_due_before_exact_boundary(self) -> None:
+        capture_time = datetime(2026, 8, 25, 19, 8)
+        self.assertFalse(
+            is_capture_due(capture_time - timedelta(microseconds=1), capture_time)
+        )
+        self.assertTrue(is_capture_due(capture_time, capture_time))

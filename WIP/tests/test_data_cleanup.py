@@ -10,16 +10,31 @@ class DataCleanupTests(TestCase):
     def test_keeps_two_latest_and_trashes_older_sessions(self) -> None:
         with TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)
-            sessions = [root / "260822", root / "260823", root / "260824", root / "260825"]
+            internal_root = root / "internal"
+            export_root = root / "export"
+            internal_root.mkdir()
+            export_root.mkdir()
+            exported_session = export_root / "260821"
+            exported_session.mkdir()
+            sessions = [
+                internal_root / "260822",
+                internal_root / "260823",
+                internal_root / "260824",
+                internal_root / "260825",
+            ]
             for index, session in enumerate(sessions, start=1):
                 session.mkdir()
                 os.utime(session, (index, index))
-            unrelated = root / "notes"
+            unrelated = internal_root / "notes"
             unrelated.mkdir()
             trashed: list[str] = []
 
-            moved = move_old_sessions_to_trash(root, trash=trashed.append)
+            moved = move_old_sessions_to_trash(
+                internal_root,
+                trash=trashed.append,
+            )
 
-            self.assertEqual(moved, [root / "260823", root / "260822"])
-            self.assertEqual(trashed, [str(root / "260823"), str(root / "260822")])
+            self.assertEqual(moved, sessions[1::-1])
+            self.assertEqual(trashed, [str(sessions[1]), str(sessions[0])])
             self.assertTrue(unrelated.exists())
+            self.assertTrue(exported_session.exists())

@@ -29,6 +29,10 @@ class ScreenshotCapture:
         if normalized_format not in {"png", "webp", "jpg"}:
             raise ScreenshotCaptureError(f"지원하지 않는 이미지 포맷: {image_format}")
         output_path = output_directory / captured_at.strftime(f"%H%M.{normalized_format}")
+        if output_path.exists():
+            raise ScreenshotCaptureError(
+                f"같은 분의 스크린샷이 이미 존재합니다: {output_path.name}"
+            )
 
         try:
             with mss.mss() as screen_capture:

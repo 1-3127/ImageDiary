@@ -35,6 +35,20 @@ class ScreenshotCaptureTests(TestCase):
                 with self.assertRaisesRegex(ScreenshotCaptureError, "BitBlt failed"):
                     ScreenshotCapture().capture(Path(temporary_directory))
 
+    def test_does_not_overwrite_capture_from_same_minute(self) -> None:
+        with TemporaryDirectory() as temporary_directory:
+            output_directory = Path(temporary_directory)
+            existing = output_directory / "2029.png"
+            existing.write_bytes(b"original")
+
+            with self.assertRaisesRegex(ScreenshotCaptureError, "이미 존재"):
+                ScreenshotCapture().capture(
+                    output_directory,
+                    datetime(2026, 8, 25, 20, 29, 59),
+                )
+
+            self.assertEqual(existing.read_bytes(), b"original")
+
     def test_saves_each_supported_format(self) -> None:
         for image_format in ("png", "webp", "jpg"):
             with self.subTest(image_format=image_format), TemporaryDirectory() as temporary_directory:

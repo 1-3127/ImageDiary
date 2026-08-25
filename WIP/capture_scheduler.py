@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta
+from math import ceil
 
-from PySide6.QtCore import QObject, QTimer, Signal
+from PySide6.QtCore import QObject, Qt, QTimer, Signal
 
 from settings import SUPPORTED_CAPTURE_INTERVAL_SECONDS
 
@@ -20,6 +21,16 @@ def next_capture_time(now: datetime, interval_seconds: int) -> datetime:
     return day_start + timedelta(seconds=next_boundary)
 
 
+def timer_delay_milliseconds(now: datetime, capture_time: datetime) -> int:
+    """경계보다 일찍 실행되지 않도록 남은 시간을 올림한 밀리초로 반환한다."""
+
+    return max(1, ceil((capture_time - now).total_seconds() * 1000))
+
+
+def is_capture_due(now: datetime, capture_time: datetime) -> bool:
+    return now >= capture_time
+
+
 class CaptureScheduler(QObject):
     """단발성 QTimer를 매 캡처 뒤 재설정해 시스템 시계 오차 누적을 피한다."""
 
@@ -33,6 +44,7 @@ class CaptureScheduler(QObject):
         self._interval_seconds = interval_seconds
         self._timer = QTimer(self)
         self._timer.setSingleShot(True)
+        self._timer.setTimerType(Qt.TimerType.PreciseTimer)
         self._timer.timeout.connect(self._on_timeout)
         self._next_time: datetime | None = None
 
@@ -48,6 +60,10 @@ class CaptureScheduler(QObject):
         self._next_time = None
 
     def _on_timeout(self) -> None:
+        now = datetime.now()
+        if self._next_time is not None and not is_capture_due(now, self._next_time):
+            self._arm_timer(now)
+            return
         self.capture_due.emit()
         self._schedule_next()
 
@@ -60,6 +76,9 @@ class CaptureScheduler(QObject):
             self._next_time += interval
             while self._next_time <= now:
                 self._next_time += interval
-        delay_ms = max(1, int((self._next_time - now).total_seconds() * 1000))
-        self._timer.start(delay_ms)
+        self._arm_timer(now)
         self.next_time_changed.emit(self._next_time)
+
+    def _arm_timer(self, now: datetime) -> None:
+        assert self._next_time is not None
+        self._timer.start(timer_delay_milliseconds(now, self._next_time))

@@ -17,7 +17,7 @@ v0.1 MVP의 Windows 실환경 검증을 완료했으며 v0.2를 개발 중입니
 - 사용자 지정 단일 저장 경로와 종료 시 Screenshot 전체 복사 토글
 - PNG/WebP/JPG 저장 포맷과 품질 설정
 - 항상 위에 고정, Windows 로그인 시작, GIF 진행 팝업
-- 최신 2개 세션을 제외한 사용자 데이터 휴지통 정리
+- 최신 2개 세션을 제외한 내부 원본 휴지통 정리(사용자 저장 경로 제외)
 
 구현 계획은 [Plan/versioned_implementation_plan.md](Plan/versioned_implementation_plan.md)에서 확인할 수 있습니다.
 

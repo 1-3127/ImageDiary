@@ -1,4 +1,4 @@
-"""사용자 저장 경로의 오래된 세션을 휴지통으로 이동한다."""
+"""내부 저장 경로의 오래된 세션을 휴지통으로 이동한다."""
 
 from __future__ import annotations
 
@@ -10,14 +10,14 @@ from send2trash import send2trash
 from retention import SESSION_DIRECTORY_PATTERN
 
 
-def find_cleanup_candidates(export_root: Path, keep_count: int = 2) -> list[Path]:
-    """최신 keep_count개를 제외한 사용자 세션 폴더를 반환한다."""
+def find_cleanup_candidates(internal_root: Path, keep_count: int = 2) -> list[Path]:
+    """최신 keep_count개를 제외한 내부 세션 폴더를 반환한다."""
 
-    if not export_root.is_dir():
+    if not internal_root.is_dir():
         return []
     sessions = [
         path
-        for path in export_root.iterdir()
+        for path in internal_root.iterdir()
         if path.is_dir()
         and not path.is_symlink()
         and not (hasattr(path, "is_junction") and path.is_junction())
@@ -28,15 +28,15 @@ def find_cleanup_candidates(export_root: Path, keep_count: int = 2) -> list[Path
 
 
 def move_old_sessions_to_trash(
-    export_root: Path,
+    internal_root: Path,
     keep_count: int = 2,
     trash: Callable[[str], None] = send2trash,
 ) -> list[Path]:
-    """정확히 export_root 바로 아래의 정리 대상만 휴지통으로 이동한다."""
+    """정확히 internal_root 바로 아래의 정리 대상만 휴지통으로 이동한다."""
 
-    root_resolved = export_root.resolve()
+    root_resolved = internal_root.resolve()
     moved: list[Path] = []
-    for candidate in find_cleanup_candidates(export_root, keep_count):
+    for candidate in find_cleanup_candidates(internal_root, keep_count):
         if candidate.resolve().parent != root_resolved:
             continue
         trash(str(candidate))

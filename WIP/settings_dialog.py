@@ -98,7 +98,9 @@ class SettingsDialog(QDialog):
         note.setWordWrap(True)
 
         cleanup_button = QPushButton("데이터 정리", self)
-        cleanup_button.setToolTip("최신 2개 세션을 제외한 폴더를 휴지통으로 이동")
+        cleanup_button.setToolTip(
+            "내부 원본 중 최신 2개 세션을 제외한 폴더를 휴지통으로 이동"
+        )
         cleanup_button.clicked.connect(self._cleanup_data)
 
         buttons = QDialogButtonBox(
@@ -161,8 +163,8 @@ class SettingsDialog(QDialog):
         self._interval_value.setText(f"{snapped}분")
 
     def _cleanup_data(self) -> None:
-        export_root = Path(self._export_path.text().strip())
-        candidates = find_cleanup_candidates(export_root)
+        internal_root = self._settings.internal_storage_root
+        candidates = find_cleanup_candidates(internal_root)
         if not candidates:
             QMessageBox.information(self, "데이터 정리", "정리할 세션 폴더가 없습니다.")
             return
@@ -172,8 +174,10 @@ class SettingsDialog(QDialog):
         confirmation.setWindowTitle("데이터 정리 확인")
         confirmation.setText("데이터를 정리하시겠습니까?")
         confirmation.setInformativeText(
-            "가장 최근 세션 2개는 남기고, 그보다 오래된 모든 세션 폴더를 "
-            "휴지통으로 이동합니다.\n\n휴지통에서 복구하거나 영구 삭제할 수 있습니다."
+            "내부 원본에서 가장 최근 세션 2개는 남기고, 그보다 오래된 "
+            "세션 폴더를 휴지통으로 이동합니다.\n\n"
+            "설정한 저장 경로의 파일은 변경하거나 삭제하지 않습니다. "
+            "휴지통으로 이동한 내부 원본은 복구하거나 영구 삭제할 수 있습니다."
         )
         cleanup = confirmation.addButton(
             "데이터 정리", QMessageBox.ButtonRole.DestructiveRole
@@ -185,7 +189,7 @@ class SettingsDialog(QDialog):
             return
 
         try:
-            moved = move_old_sessions_to_trash(export_root)
+            moved = move_old_sessions_to_trash(internal_root)
         except OSError as error:
             QMessageBox.critical(self, "데이터 정리 실패", str(error))
             return
