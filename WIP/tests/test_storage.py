@@ -1,3 +1,4 @@
+import os
 from datetime import datetime
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -34,10 +35,22 @@ class SessionStorageTests(TestCase):
 
             self.assertEqual(session.name, "260825-02")
 
-    def test_gif_output_name_contains_first_and_last_image_names(self) -> None:
-        output = SessionStorage.gif_output_path(
-            Path("session"),
-            Path("Screenshot/1907.png"),
-            Path("Screenshot/2215.webp"),
-        )
-        self.assertEqual(output.name, "Diary_1907-2215.gif")
+    def test_gif_output_name_contains_first_and_last_modified_times(self) -> None:
+        with TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            first_image = root / "001.png"
+            last_image = root / "002.webp"
+            first_image.write_bytes(b"first")
+            last_image.write_bytes(b"last")
+            first_time = datetime(2026, 8, 25, 19, 7)
+            last_time = datetime(2026, 8, 25, 22, 15)
+            os.utime(first_image, (first_time.timestamp(), first_time.timestamp()))
+            os.utime(last_image, (last_time.timestamp(), last_time.timestamp()))
+
+            output = SessionStorage.gif_output_path(
+                root,
+                first_image,
+                last_image,
+            )
+
+            self.assertEqual(output.name, "Diary_1907-2215.gif")

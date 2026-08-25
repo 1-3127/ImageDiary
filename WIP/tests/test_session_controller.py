@@ -1,3 +1,4 @@
+import os
 from datetime import datetime
 from dataclasses import replace
 from pathlib import Path
@@ -75,6 +76,13 @@ class SessionControllerTests(TestCase):
             Image.new("RGB", (8, 8), "green").save(image_path)
             last_image_path = screenshots / "2045.png"
             Image.new("RGB", (8, 8), "blue").save(last_image_path)
+            first_time = datetime(2026, 8, 25, 20, 30)
+            last_time = datetime(2026, 8, 25, 20, 45)
+            os.utime(image_path, (first_time.timestamp(), first_time.timestamp()))
+            os.utime(
+                last_image_path,
+                (last_time.timestamp(), last_time.timestamp()),
+            )
             settings = AppSettings(
                 root / "export",
                 internal_storage_root=root / "internal",
