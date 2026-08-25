@@ -159,8 +159,9 @@ class MainWindow(QMainWindow):
         self._controller.update_settings(self._settings)
 
     def _apply_always_on_top(self, enabled: bool) -> None:
+        was_visible = self.isVisible()
         self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, enabled)
-        if self.isVisible():
+        if was_visible:
             self.show()
 
     def check_for_recovery(self) -> None:
