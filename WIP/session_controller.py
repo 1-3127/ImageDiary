@@ -50,9 +50,13 @@ class SessionController(QObject):
             return
 
         self._session_start = datetime.now()
-        self._session_directory = self._storage.create_session_directory(self._session_start)
-        self._screenshots_directory = self._session_directory / "screenshots"
-        self._screenshots_directory.mkdir(parents=True, exist_ok=True)
+        try:
+            self._session_directory = self._storage.create_session_directory(self._session_start)
+            self._screenshots_directory = self._session_directory / "screenshots"
+            self._screenshots_directory.mkdir(parents=True, exist_ok=True)
+        except OSError as error:
+            self.status_changed.emit(f"Session start failed: {error}")
+            return
         self._capture_count = 0
         self.capture_count_changed.emit(self._capture_count)
         self._set_state(SessionState.RECORDING)
@@ -94,7 +98,8 @@ class SessionController(QObject):
             self.status_changed.emit(f"GIF generation failed: {error}")
         finally:
             self._set_state(SessionState.IDLE)
-            self.output_ready.emit(self._session_directory)
+            if self._settings.open_output_on_finish:
+                self.output_ready.emit(self._session_directory)
 
     def _capture_screenshot(self) -> None:
         if self._state is not SessionState.RECORDING:
