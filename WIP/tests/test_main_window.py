@@ -55,10 +55,13 @@ class MainWindowTests(TestCase):
             window._session_status.set_next_capture(
                 datetime(2026, 8, 25, 21, 30)
             )
+            window._session_status._refresh_capture_overview(
+                datetime(2026, 8, 25, 21, 20, 1)
+            )
 
             self.assertEqual(
                 window._session_status._capture_overview.text(),
-                "다음 캡처 21:30 (3번째)",
+                "3번째 캡처까지: 10m",
             )
             window.close()
 
@@ -66,12 +69,14 @@ class MainWindowTests(TestCase):
         dialog = SettingsDialog(default_settings())
 
         self.assertEqual(dialog._export_path.text(), str(default_settings().export_root))
-        self.assertEqual(len(dialog._interval_buttons), 3)
-        self.assertTrue(dialog._interval_buttons[15 * 60].isChecked())
+        self.assertEqual(dialog._interval.minimum(), 10)
+        self.assertEqual(dialog._interval.maximum(), 30)
+        self.assertEqual(dialog._interval.singleStep(), 5)
+        self.assertEqual(dialog._interval.value(), 15)
         self.assertTrue(dialog._export_screenshots.isChecked())
         dialog.close()
 
-    def test_capture_overview_shows_seconds_in_debug_mode(self) -> None:
+    def test_status_is_available_for_toolbar(self) -> None:
         with TemporaryDirectory() as temporary_directory:
             repository = SettingsRepository(
                 QSettings(
@@ -80,13 +85,6 @@ class MainWindowTests(TestCase):
                 )
             )
             window = MainWindow(repository, Mock())
-            window._session_status.set_capture_interval(60)
-            window._session_status.set_next_capture(
-                datetime(2026, 8, 25, 21, 30, 15)
-            )
-
-            self.assertEqual(
-                window._session_status._capture_overview.text(),
-                "다음 캡처 21:30:15 (1번째)",
-            )
+            window._session_status.set_status("기록 중")
+            self.assertEqual(window._session_status.status_label.text(), "상태: 기록 중")
             window.close()

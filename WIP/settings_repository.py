@@ -6,7 +6,12 @@ from pathlib import Path
 
 from PySide6.QtCore import QSettings
 
-from settings import AppSettings, SUPPORTED_CAPTURE_FORMATS, default_settings
+from settings import (
+    AppSettings,
+    SUPPORTED_CAPTURE_FORMATS,
+    SUPPORTED_CAPTURE_INTERVAL_SECONDS,
+    default_settings,
+)
 
 
 class SettingsRepository:
@@ -27,14 +32,18 @@ class SettingsRepository:
                 str(defaults.export_root),
             )
 
+        capture_interval_seconds = int(
+            self._backend.value(
+                "capture/interval_seconds",
+                defaults.capture_interval_seconds,
+            )
+        )
+        if capture_interval_seconds not in SUPPORTED_CAPTURE_INTERVAL_SECONDS:
+            capture_interval_seconds = defaults.capture_interval_seconds
+
         return AppSettings(
             export_root=Path(str(export_root)),
-            capture_interval_seconds=int(
-                self._backend.value(
-                    "capture/interval_seconds",
-                    defaults.capture_interval_seconds,
-                )
-            ),
+            capture_interval_seconds=capture_interval_seconds,
             capture_format=capture_format,
             image_quality=int(
                 self._backend.value("capture/image_quality", defaults.image_quality)

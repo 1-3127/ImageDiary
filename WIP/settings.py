@@ -8,6 +8,9 @@ from pathlib import Path
 
 INTERNAL_STORAGE_ROOT = Path(r"C:\temp\workdiary")
 SUPPORTED_CAPTURE_FORMATS = ("png", "webp", "jpg")
+SUPPORTED_CAPTURE_INTERVAL_SECONDS = tuple(
+    minutes * 60 for minutes in range(10, 31, 5)
+)
 
 
 def default_export_root() -> Path:
@@ -42,7 +45,7 @@ class AppSettings:
             raise ValueError("image_quality must be between 1 and 100")
         if self.internal_retention_days < 1:
             raise ValueError("internal_retention_days must be at least 1")
-        if self.capture_interval_seconds not in {60, 15 * 60, 30 * 60}:
+        if self.capture_interval_seconds not in SUPPORTED_CAPTURE_INTERVAL_SECONDS:
             raise ValueError("Unsupported capture interval")
 
     @property

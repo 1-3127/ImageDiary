@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import replace
 from pathlib import Path
 
-from PySide6.QtCore import Signal
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -13,13 +13,12 @@ from PySide6.QtWidgets import (
     QDialogButtonBox,
     QFileDialog,
     QFormLayout,
-    QGroupBox,
     QHBoxLayout,
     QLabel,
     QLineEdit,
     QMessageBox,
     QPushButton,
-    QRadioButton,
+    QSlider,
     QSpinBox,
     QVBoxLayout,
     QWidget,
@@ -46,20 +45,22 @@ class SettingsDialog(QDialog):
         self._export_path = QLineEdit(str(self._settings.export_root), self)
         form.addRow("저장 경로:", self._path_row(self._export_path, "작업 일기"))
 
-        self._interval_buttons: dict[int, QRadioButton] = {}
-        interval_group = QGroupBox(self)
-        interval_layout = QHBoxLayout(interval_group)
-        interval_options = (
-            ("60초 (디버그)", 60),
-            ("15분", 15 * 60),
-            ("30분", 30 * 60),
-        )
-        for text, seconds in interval_options:
-            button = QRadioButton(text, interval_group)
-            button.setChecked(seconds == self._settings.capture_interval_seconds)
-            self._interval_buttons[seconds] = button
-            interval_layout.addWidget(button)
-        form.addRow("캡처 간격:", interval_group)
+        interval_widget = QWidget(self)
+        interval_layout = QHBoxLayout(interval_widget)
+        interval_layout.setContentsMargins(0, 0, 0, 0)
+        self._interval = QSlider(Qt.Orientation.Horizontal, interval_widget)
+        self._interval.setRange(10, 30)
+        self._interval.setSingleStep(5)
+        self._interval.setPageStep(5)
+        self._interval.setTickInterval(5)
+        self._interval.setTickPosition(QSlider.TickPosition.TicksBelow)
+        self._interval.setValue(self._settings.capture_interval_seconds // 60)
+        self._interval_value = QLabel(interval_widget)
+        self._interval.valueChanged.connect(self._snap_interval)
+        self._snap_interval(self._interval.value())
+        interval_layout.addWidget(self._interval)
+        interval_layout.addWidget(self._interval_value)
+        form.addRow("캡처 간격:", interval_widget)
 
         self._format = QComboBox(self)
         self._format.addItems(list(SUPPORTED_CAPTURE_FORMATS))
@@ -133,7 +134,7 @@ class SettingsDialog(QDialog):
         updated = replace(
             self._settings,
             export_root=Path(export_path),
-            capture_interval_seconds=self._selected_interval(),
+            capture_interval_seconds=self._interval.value() * 60,
             capture_format=self._format.currentText(),
             image_quality=self._quality.value(),
             run_at_login=self._run_at_login.isChecked(),
@@ -142,11 +143,12 @@ class SettingsDialog(QDialog):
         self.settings_saved.emit(updated)
         self.accept()
 
-    def _selected_interval(self) -> int:
-        for seconds, button in self._interval_buttons.items():
-            if button.isChecked():
-                return seconds
-        return self._settings.capture_interval_seconds
+    def _snap_interval(self, value: int) -> None:
+        snapped = min(30, max(10, round(value / 5) * 5))
+        if snapped != value:
+            self._interval.setValue(snapped)
+            return
+        self._interval_value.setText(f"{snapped}분")
 
     def _cleanup_data(self) -> None:
         export_root = Path(self._export_path.text().strip())

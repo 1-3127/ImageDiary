@@ -79,6 +79,7 @@ class SessionController(QObject):
         self._scheduler.capture_due.connect(self._capture_screenshot)
         self._scheduler.next_time_changed.connect(self.next_capture_changed)
         self._scheduler.start()
+        self._capture_screenshot()
 
     def update_settings(self, settings: AppSettings) -> None:
         """새 설정을 다음 세션에 사용한다. 진행 중인 세션 스냅샷은 유지한다."""

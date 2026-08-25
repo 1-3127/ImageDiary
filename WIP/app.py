@@ -53,6 +53,8 @@ class MainWindow(QMainWindow):
 
         toolbar = QHBoxLayout()
         toolbar.addStretch()
+        self._session_status = SessionStatusWidget(root)
+        toolbar.addWidget(self._session_status.status_label)
         self._pin_button = QToolButton(root)
         self._pin_button.setText("고정")
         self._pin_button.setCheckable(True)
@@ -62,8 +64,6 @@ class MainWindow(QMainWindow):
         self._settings_button.setToolTip("설정 열기")
         toolbar.addWidget(self._pin_button)
         toolbar.addWidget(self._settings_button)
-
-        self._session_status = SessionStatusWidget(root)
 
         buttons = QHBoxLayout()
         self._start_button = QPushButton("시작", root)
@@ -93,9 +93,6 @@ class MainWindow(QMainWindow):
         self._controller.encoding_progress.connect(self._gif_progress.update_progress)
 
     def _start(self) -> None:
-        self._session_status.set_capture_interval(
-            self._settings.capture_interval_seconds
-        )
         self._controller.start()
 
     def _apply_state(self, state: SessionState) -> None:
@@ -154,9 +151,6 @@ class MainWindow(QMainWindow):
 
         action = ask_recovery_action(candidate, self)
         if action is RecoveryAction.RESUME:
-            self._session_status.set_capture_interval(
-                self._settings.capture_interval_seconds
-            )
             self._controller.resume(candidate)
         elif action is RecoveryAction.FINISH:
             self._controller.finish_recovered(candidate)

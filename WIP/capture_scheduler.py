@@ -1,4 +1,4 @@
-"""시스템 시계의 선택 간격 경계에 맞춰 캡처 신호를 발생시킨다."""
+"""세션 시작 이후 선택한 간격에 맞춰 캡처 신호를 발생시킨다."""
 
 from __future__ import annotations
 
@@ -6,20 +6,15 @@ from datetime import datetime, timedelta
 
 from PySide6.QtCore import QObject, QTimer, Signal
 
-
-SUPPORTED_INTERVAL_SECONDS = (60, 15 * 60, 30 * 60)
+from settings import SUPPORTED_CAPTURE_INTERVAL_SECONDS
 
 
 def next_capture_time(now: datetime, interval_seconds: int) -> datetime:
-    """현재 시각보다 엄격히 뒤에 있는 다음 interval 경계를 반환한다."""
+    """현재 시각에서 선택 간격 뒤의 다음 캡처 시각을 반환한다."""
 
-    if interval_seconds not in SUPPORTED_INTERVAL_SECONDS:
-        raise ValueError("interval_seconds must be 60, 900, or 1800")
-
-    day_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
-    elapsed_seconds = (now - day_start).total_seconds()
-    next_boundary = (int(elapsed_seconds) // interval_seconds + 1) * interval_seconds
-    return day_start + timedelta(seconds=next_boundary)
+    if interval_seconds not in SUPPORTED_CAPTURE_INTERVAL_SECONDS:
+        raise ValueError("Unsupported capture interval")
+    return now + timedelta(seconds=interval_seconds)
 
 
 class CaptureScheduler(QObject):
@@ -30,7 +25,7 @@ class CaptureScheduler(QObject):
 
     def __init__(self, interval_seconds: int, parent: QObject | None = None) -> None:
         super().__init__(parent)
-        if interval_seconds not in SUPPORTED_INTERVAL_SECONDS:
+        if interval_seconds not in SUPPORTED_CAPTURE_INTERVAL_SECONDS:
             raise ValueError("Unsupported capture interval")
         self._interval_seconds = interval_seconds
         self._timer = QTimer(self)
@@ -55,7 +50,13 @@ class CaptureScheduler(QObject):
 
     def _schedule_next(self) -> None:
         now = datetime.now()
-        self._next_time = next_capture_time(now, self._interval_seconds)
+        if self._next_time is None:
+            self._next_time = next_capture_time(now, self._interval_seconds)
+        else:
+            interval = timedelta(seconds=self._interval_seconds)
+            self._next_time += interval
+            while self._next_time <= now:
+                self._next_time += interval
         delay_ms = max(1, int((self._next_time - now).total_seconds() * 1000))
         self._timer.start(delay_ms)
         self.next_time_changed.emit(self._next_time)

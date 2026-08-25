@@ -55,7 +55,6 @@ class SessionControllerTests(TestCase):
             controller.output_ready.connect(outputs.append)
 
             controller.start()
-            controller._capture_screenshot()
             controller.finish()
 
             self.assertIs(controller.state, SessionState.IDLE)
@@ -113,7 +112,6 @@ class SessionControllerTests(TestCase):
             controller.output_ready.connect(outputs.append)
 
             controller.start()
-            controller._capture_screenshot()
             controller.finish()
 
             self.assertEqual(len(list(outputs[0].glob("Diary_*.gif"))), 1)
@@ -144,7 +142,6 @@ class SessionControllerTests(TestCase):
             controller.update_settings(
                 replace(initial_settings, capture_format="jpg")
             )
-            controller._capture_screenshot()
             controller.finish()
 
             self.assertEqual(received_formats, ["png"])
