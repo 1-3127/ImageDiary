@@ -14,19 +14,35 @@ class ScreenshotCaptureError(RuntimeError):
 
 
 class ScreenshotCapture:
-    def capture(self, output_directory: Path, captured_at: datetime | None = None) -> Path:
-        """PNG 하나를 저장하고, 실제 생성된 절대 경로를 반환한다."""
+    def capture(
+        self,
+        output_directory: Path,
+        captured_at: datetime | None = None,
+        image_format: str = "png",
+        image_quality: int = 85,
+    ) -> Path:
+        """선택한 포맷으로 한 장을 저장하고 실제 절대 경로를 반환한다."""
 
         captured_at = captured_at or datetime.now()
         output_directory.mkdir(parents=True, exist_ok=True)
-        output_path = output_directory / captured_at.strftime("%H%M.png")
+        normalized_format = image_format.lower()
+        if normalized_format not in {"png", "webp", "jpg"}:
+            raise ScreenshotCaptureError(f"지원하지 않는 이미지 포맷: {image_format}")
+        output_path = output_directory / captured_at.strftime(f"%H%M.{normalized_format}")
 
         try:
             with mss.mss() as screen_capture:
                 virtual_screen = screen_capture.monitors[0]
                 raw_image = screen_capture.grab(virtual_screen)
                 image = Image.frombytes("RGB", raw_image.size, raw_image.rgb)
-                image.save(output_path, format="PNG")
+                save_options: dict[str, object] = {}
+                pillow_format = normalized_format.upper()
+                if normalized_format == "jpg":
+                    pillow_format = "JPEG"
+                    save_options = {"quality": image_quality, "optimize": True}
+                elif normalized_format == "webp":
+                    save_options = {"quality": image_quality}
+                image.save(output_path, format=pillow_format, **save_options)
         except (OSError, ScreenShotError) as error:
             raise ScreenshotCaptureError(f"화면 캡처 실패: {error}") from error
 

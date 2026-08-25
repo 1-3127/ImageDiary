@@ -9,6 +9,7 @@ from pathlib import Path
 from PySide6.QtCore import QObject, Signal
 
 from capture_scheduler import CaptureScheduler
+from file_exporter import FileExportError, FileExporter
 from gif_builder import GifBuilder
 from screenshot_capture import ScreenshotCapture, ScreenshotCaptureError
 from settings import AppSettings
@@ -39,6 +40,7 @@ class SessionController(QObject):
         self._scheduler: CaptureScheduler | None = None
         self._screenshot_capture = ScreenshotCapture()
         self._gif_builder = GifBuilder()
+        self._file_exporter = FileExporter()
         self._storage = SessionStorage(settings.storage_root)
 
     @property
@@ -91,27 +93,48 @@ class SessionController(QObject):
                 self._settings.gif_frame_duration_ms,
                 self._settings.gif_loop,
             )
+            exported_gif = self._file_exporter.copy_gif(
+                gif_path,
+                self._settings.gif_export_root,
+                self._session_directory.name,
+            )
             self.status_changed.emit(f"완료: {frame_count}프레임")
         except ValueError:
             self.status_changed.emit("캡처 이미지가 없어 GIF를 생성하지 않았습니다")
-        except (OSError, RuntimeError) as error:
+        except (OSError, RuntimeError, FileExportError) as error:
             self.status_changed.emit(f"GIF 생성 실패: {error}")
         finally:
             self._set_state(SessionState.IDLE)
             if self._settings.open_output_on_finish:
-                self.output_ready.emit(self._session_directory)
+                output_directory = (
+                    exported_gif.parent if "exported_gif" in locals() else self._session_directory
+                )
+                self.output_ready.emit(output_directory)
 
     def _capture_screenshot(self) -> None:
         if self._state is not SessionState.RECORDING:
             return
         assert self._screenshots_directory is not None
         try:
-            self._screenshot_capture.capture(self._screenshots_directory)
+            screenshot = self._screenshot_capture.capture(
+                self._screenshots_directory,
+                image_format=self._settings.capture_format,
+                image_quality=self._settings.image_quality,
+            )
+            self._file_exporter.copy_screenshot(
+                screenshot,
+                self._settings.screenshot_export_root,
+                self._session_directory.name,
+            )
             self._capture_count += 1
             self.capture_count_changed.emit(self._capture_count)
             self.status_changed.emit("기록 중")
         except ScreenshotCaptureError as error:
             self.status_changed.emit(f"화면 캡처 실패: {error}")
+        except FileExportError as error:
+            self._capture_count += 1
+            self.capture_count_changed.emit(self._capture_count)
+            self.status_changed.emit(f"캡처 저장 완료, 사용자 경로 복사 실패: {error}")
 
     def _set_state(self, state: SessionState) -> None:
         self._state = state

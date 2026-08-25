@@ -12,11 +12,12 @@ from settings import AppSettings
 class SessionControllerTests(TestCase):
     def test_storage_failure_keeps_session_idle(self) -> None:
         with TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
             controller = SessionController(
                 AppSettings(
-                    Path(temporary_directory),
-                    Path(temporary_directory),
-                    internal_storage_root=Path(temporary_directory),
+                    root / "screenshot-export",
+                    root / "gif-export",
+                    internal_storage_root=root / "internal",
                 )
             )
             controller._storage = Mock()
@@ -31,15 +32,16 @@ class SessionControllerTests(TestCase):
 
     def test_complete_session_builds_gif_and_returns_to_idle(self) -> None:
         with TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
             controller = SessionController(
                 AppSettings(
-                    Path(temporary_directory),
-                    Path(temporary_directory),
-                    internal_storage_root=Path(temporary_directory),
+                    root / "screenshot-export",
+                    root / "gif-export",
+                    internal_storage_root=root / "internal",
                 )
             )
 
-            def create_test_capture(output_directory: Path) -> Path:
+            def create_test_capture(output_directory: Path, **_options: object) -> Path:
                 output_directory.mkdir(parents=True, exist_ok=True)
                 output_path = output_directory / "1915.png"
                 Image.new("RGB", (8, 8), "green").save(output_path)
@@ -56,4 +58,7 @@ class SessionControllerTests(TestCase):
             self.assertIs(controller.state, SessionState.IDLE)
             self.assertEqual(len(outputs), 1)
             self.assertEqual(len(list(outputs[0].glob("*.gif"))), 1)
-            self.assertEqual(len(list((outputs[0] / "Screenshot").glob("*.png"))), 1)
+            exported_screenshots = (
+                root / "screenshot-export" / outputs[0].name / "Screenshot"
+            )
+            self.assertEqual(len(list(exported_screenshots.glob("*.png"))), 1)
