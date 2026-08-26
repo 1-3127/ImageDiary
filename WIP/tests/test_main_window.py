@@ -82,7 +82,7 @@ class MainWindowTests(TestCase):
         options = dialog.options()
 
         self.assertEqual(options.filename, "Diary_0900-1800.gif")
-        self.assertTrue(options.export_images)
+        self.assertFalse(options.export_images)
         self.assertTrue(options.images_with_gif)
         self.assertFalse(options.blur_enabled)
         self.assertEqual(options.gif_export_root, Path("D:/WorkDiary"))

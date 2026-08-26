@@ -26,6 +26,9 @@ class GifOutputOptions:
     watermark_size: int = 2
     timecode_enabled: bool = False
     timecode_show_date: bool = True
+    timecode_background_level: int = 2
+    timecode_horizontal: str = "left"
+    timecode_vertical: str = "upper_middle"
 
     def __post_init__(self) -> None:
         filename = Path(self.filename).name
@@ -41,4 +44,10 @@ class GifOutputOptions:
             raise ValueError("워터마크 투명도는 약, 중, 강 중 하나여야 합니다.")
         if self.watermark_size not in {1, 2, 3}:
             raise ValueError("워터마크 크기는 작게, 중간, 크게 중 하나여야 합니다.")
+        if self.timecode_background_level not in {1, 2, 3}:
+            raise ValueError("타임코드 배경 선명도는 약, 중, 강 중 하나여야 합니다.")
+        if self.timecode_horizontal not in {"left", "right"}:
+            raise ValueError("타임코드 가로 위치가 올바르지 않습니다.")
+        if self.timecode_vertical not in {"top", "upper_middle", "middle", "lower_middle", "bottom"}:
+            raise ValueError("타임코드 세로 위치가 올바르지 않습니다.")
         object.__setattr__(self, "filename", filename)

@@ -77,12 +77,15 @@ class GifPostProcessor:
             else timestamp.strftime("%H:%M")
         )
         draw = ImageDraw.Draw(frame, "RGBA")
-        left, top, right, bottom = draw.textbbox((0, 0), text)
+        font = ImageFont.load_default(size=28)
+        left, top, right, bottom = draw.textbbox((0, 0), text, font=font)
         padding = 8
-        x = 10
-        y = max(padding, frame.height // 4)
+        x = 10 if self._options.timecode_horizontal == "left" else frame.width - (right - left) - 10
+        vertical_ratios = {"top": 0, "upper_middle": 0.25, "middle": 0.5, "lower_middle": 0.75, "bottom": 1}
+        y = int((frame.height - (bottom - top)) * vertical_ratios[self._options.timecode_vertical])
+        background_alpha = {1: 80, 2: 150, 3: 220}[self._options.timecode_background_level]
         draw.rectangle(
             (x - padding, y - padding, x + (right - left) + padding, y + (bottom - top) + padding),
-            fill=(0, 0, 0, 150),
+            fill=(0, 0, 0, background_alpha),
         )
-        draw.text((x, y), text, fill=(255, 255, 255, 255))
+        draw.text((x, y), text, font=font, fill=(255, 255, 255, 255))
