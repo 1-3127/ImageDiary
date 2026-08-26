@@ -33,8 +33,8 @@ class GifPostProcessor:
         return blurred
 
     def _apply_letterbox(self, frame: Image.Image) -> None:
-        top = self._options.crop_top_px
-        bottom = self._options.crop_bottom_px
+        top = 50 if self._options.hide_top else 0
+        bottom = 50 if self._options.hide_bottom else 0
         if top + bottom >= frame.height:
             raise ValueError("상단과 하단 마스킹 합계가 이미지 높이보다 작아야 합니다.")
         draw = ImageDraw.Draw(frame)

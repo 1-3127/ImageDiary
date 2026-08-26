@@ -126,6 +126,19 @@ class SessionController(QObject):
         self._set_state(SessionState.RECORDING)
         self.finish()
 
+    def prepare_recovered_finish(self, candidate: RecoveryCandidate) -> None:
+        if self._state is not SessionState.IDLE:
+            return
+        self._session_settings = self._next_settings
+        self._storage = SessionStorage(self._session_settings.internal_storage_root)
+        self._session_start = candidate.started_at
+        self._session_directory = candidate.session_directory
+        self._screenshots_directory = candidate.screenshots_directory
+        self._capture_count = len(candidate.image_paths)
+        self.capture_count_changed.emit(self._capture_count)
+        self._scheduler = None
+        self._set_state(SessionState.RECORDING)
+
     def default_gif_filename(self) -> str | None:
         if self._screenshots_directory is None or self._session_directory is None:
             return None

@@ -18,6 +18,8 @@ class GifOutputOptions:
     blur_enabled: bool = False
     blur_strength: int = 2
     crop_enabled: bool = False
+    hide_top: bool = False
+    hide_bottom: bool = False
     crop_top_px: int = 0
     crop_bottom_px: int = 0
     watermark_enabled: bool = False

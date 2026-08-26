@@ -12,7 +12,7 @@ class GifPostProcessorTests(TestCase):
     def test_masking_preserves_frame_size_without_mutating_source(self) -> None:
         with TemporaryDirectory() as temporary_directory:
             source_path = Path(temporary_directory) / "001.png"
-            source = Image.new("RGB", (20, 20), "red")
+            source = Image.new("RGB", (20, 120), "red")
             source.save(source_path)
             source.close()
             original = Image.open(source_path)
@@ -20,6 +20,8 @@ class GifPostProcessorTests(TestCase):
                 GifOutputOptions(
                     filename="Diary_test.gif",
                     crop_enabled=True,
+                    hide_top=True,
+                    hide_bottom=True,
                     crop_top_px=3,
                     crop_bottom_px=4,
                 )
@@ -27,10 +29,10 @@ class GifPostProcessorTests(TestCase):
 
             processed = processor.process(original, source_path)
 
-            self.assertEqual(processed.size, (20, 20))
+            self.assertEqual(processed.size, (20, 120))
             self.assertEqual(processed.getpixel((10, 1)), (0, 0, 0))
             with Image.open(source_path) as unchanged:
-                self.assertEqual(unchanged.size, (20, 20))
+                self.assertEqual(unchanged.size, (20, 120))
             processed.close()
 
     def test_rejects_crop_larger_than_frame(self) -> None:
@@ -42,8 +44,10 @@ class GifPostProcessorTests(TestCase):
             with Image.open(source_path) as original:
                 processor = GifPostProcessor(
                     GifOutputOptions(
-                        filename="Diary_test.gif",
-                        crop_enabled=True,
+                    filename="Diary_test.gif",
+                    crop_enabled=True,
+                    hide_top=True,
+                    hide_bottom=True,
                         crop_top_px=5,
                         crop_bottom_px=5,
                     )

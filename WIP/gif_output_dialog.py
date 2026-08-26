@@ -14,7 +14,7 @@ from gif_output_options import GifOutputOptions
 
 class _Preview(QWidget):
     def __init__(self, watermark: bool, parent: QWidget) -> None:
-        super().__init__(parent); self.watermark = watermark; self.text = "ImageDiary"; self.size = 2; self.opacity = 2; self.date = True; self.background = 2; self.horizontal = "left"; self.vertical = "upper_middle"; self.setFixedHeight(80)
+        super().__init__(parent); self.watermark = watermark; self.text = "ImageDiary"; self.size = 2; self.opacity = 2; self.date = True; self.background = 2; self.horizontal = "left"; self.vertical = "upper_middle"; self.setFixedHeight(100 if watermark else 160)
 
     def paintEvent(self, _event: object) -> None:
         painter = QPainter(self); painter.fillRect(self.rect(), QColor("#4a4a4a"))
@@ -25,7 +25,7 @@ class _Preview(QWidget):
             rect = painter.fontMetrics().boundingRect(self.text or "ImageDiary")
             painter.drawText(-rect.width() // 2, rect.height() // 2, self.text or "ImageDiary")
         else:
-            text = "08/26 19:15" if self.date else "19:15"; font = QFont(); font.setPixelSize(48); painter.setFont(font)
+            text = "08/26 19:15" if self.date else "19:15"; font = QFont(); font.setPixelSize(28); painter.setFont(font)
             rect = painter.fontMetrics().boundingRect(text); x = 10 if self.horizontal == "left" else self.width() - rect.width() - 10; ratios = {"top": 0, "upper_middle": .25, "middle": .5, "lower_middle": .75, "bottom": 1}; y, padding = int((self.height() - rect.height()) * ratios[self.vertical]), 8
             painter.fillRect(x-padding, y-padding, rect.width()+padding*2, rect.height()+padding*2, QColor(0, 0, 0, {1: 35, 2: 145, 3: 245}[self.background])); painter.setPen(QColor("white")); painter.drawText(x, y+rect.height(), text)
         painter.end()
@@ -45,6 +45,16 @@ class _BlurPreview(QWidget):
         painter.setPen(QColor("white")); painter.drawText(18, 48, "ImageDiary"); painter.end()
 
 
+class _MaskPreview(QWidget):
+    def __init__(self, parent: QWidget) -> None:
+        super().__init__(parent); self.top = False; self.bottom = False; self.setFixedHeight(90)
+    def paintEvent(self, _event: object) -> None:
+        painter = QPainter(self); painter.fillRect(self.rect(), QColor("#6686a4")); painter.setPen(QColor("white")); painter.drawText(12, 48, "프로그램 화면 / 작업 표시줄")
+        if self.top: painter.fillRect(0, 0, self.width(), 18, QColor("black"))
+        if self.bottom: painter.fillRect(0, self.height()-18, self.width(), 18, QColor("black"))
+        painter.end()
+
+
 class GifOutputDialog(QDialog):
     def __init__(self, default_filename: str, default_export_root: Path, parent: QWidget | None = None) -> None:
         super().__init__(parent); self.setWindowTitle("GIF 출력 설정"); self._root = default_export_root; self._preferences = QSettings("ImageDiary", "ImageDiary"); self._build(default_filename); self._load_preferences(); self._update()
@@ -61,20 +71,18 @@ class GifOutputDialog(QDialog):
         group = QGroupBox("GIF 후처리", self); form = QFormLayout(group)
         self._blur = QCheckBox("전체 화면 블러", group); self._blur_strength = self._slider(group, "약", "중", "강")
         self._blur_preview = _BlurPreview(group)
-        self._top = QSpinBox(group); self._bottom = QSpinBox(group)
-        for control in (self._top, self._bottom): control.setRange(0, 10000); control.setSuffix(" px")
-        self._crop = QCheckBox("상하단 가리기", group)
+        self._hide_top = QCheckBox("상단 가리기 (50px)", group); self._hide_bottom = QCheckBox("하단 가리기 (50px)", group); self._mask_preview = _MaskPreview(group)
         self._watermark = QCheckBox("반복 워터마크", group); self._watermark_text = QLineEdit("ImageDiary", group); self._watermark_opacity = self._slider(group, "약", "중", "강"); self._watermark_size = self._slider(group, "작게", "중간", "크게"); self._watermark_preview = _Preview(True, group)
         self._timecode = QCheckBox("타임코드 표시", group); self._date = QCheckBox("날짜(MM/DD) 함께 표시", group); self._date.setChecked(True); self._timecode_background = self._slider(group, "약", "중", "강"); self._timecode_horizontal = QComboBox(group); self._timecode_horizontal.addItem("좌측", "left"); self._timecode_horizontal.addItem("우측", "right"); self._timecode_vertical = QComboBox(group)
         for label, value in (("상단", "top"), ("상중", "upper_middle"), ("중", "middle"), ("중하", "lower_middle"), ("하단", "bottom")): self._timecode_vertical.addItem(label, value)
         self._timecode_vertical.setCurrentIndex(1); self._timecode_preview = _Preview(False, group)
-        form.addRow(self._blur); form.addRow("블러 강도", self._blur_strength); form.addRow("블러 미리보기", self._blur_preview); form.addRow(self._crop); form.addRow("상단 범위", self._top); form.addRow("하단 범위", self._bottom)
+        form.addRow(self._blur); form.addRow("블러 강도", self._blur_strength); form.addRow("블러 미리보기", self._blur_preview); form.addRow(self._hide_top); form.addRow(self._hide_bottom); form.addRow("가리기 미리보기", self._mask_preview)
         form.addRow(self._watermark); form.addRow("워터마크 문구", self._watermark_text); form.addRow("워터마크 선명도", self._watermark_opacity); form.addRow("워터마크 크기", self._watermark_size); form.addRow("워터마크 미리보기", self._watermark_preview)
         form.addRow(self._timecode); form.addRow(self._date); form.addRow("타임코드 배경 선명도", self._timecode_background); form.addRow("타임코드 가로 위치", self._timecode_horizontal); form.addRow("타임코드 세로 위치", self._timecode_vertical); form.addRow("타임코드 미리보기", self._timecode_preview); layout.addWidget(group)
         self._remember = QCheckBox("설정 기억하기", self); layout.addWidget(self._remember)
         note = QLabel("후처리는 GIF에만 적용됩니다.", self); note.setWordWrap(True); layout.addWidget(note)
         buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Cancel | QDialogButtonBox.StandardButton.Ok, Qt.Orientation.Horizontal, self); buttons.button(QDialogButtonBox.StandardButton.Ok).setText("GIF 생성"); buttons.accepted.connect(self._accept); buttons.rejected.connect(self.reject); layout.addWidget(buttons)
-        self._export_images.toggled.connect(self._update); self._same_path.toggled.connect(self._update); self._blur.toggled.connect(self._update); self._crop.toggled.connect(self._update); self._watermark.toggled.connect(self._update); self._timecode.toggled.connect(self._update)
+        self._export_images.toggled.connect(self._update); self._same_path.toggled.connect(self._update); self._blur.toggled.connect(self._update); self._hide_top.toggled.connect(self._refresh_previews); self._hide_bottom.toggled.connect(self._refresh_previews); self._watermark.toggled.connect(self._update); self._timecode.toggled.connect(self._update)
         self._watermark_text.textChanged.connect(self._refresh_previews); self._value(self._watermark_size).valueChanged.connect(self._refresh_previews); self._value(self._watermark_opacity).valueChanged.connect(self._refresh_previews); self._value(self._blur_strength).valueChanged.connect(self._refresh_previews); self._value(self._timecode_background).valueChanged.connect(self._refresh_previews); self._date.toggled.connect(self._refresh_previews); self._timecode_horizontal.currentIndexChanged.connect(self._refresh_previews); self._timecode_vertical.currentIndexChanged.connect(self._refresh_previews); self._refresh_previews()
 
     def _path_widget(self, parent: QWidget) -> tuple[QLineEdit, QWidget]:
@@ -92,13 +100,13 @@ class GifOutputDialog(QDialog):
         if selected: line.setText(selected)
 
     def _update(self) -> None:
-        save_images = self._export_images.isChecked(); self._same_path.setEnabled(save_images); self._image_path_widget.setEnabled(save_images and not self._same_path.isChecked()); self._blur_strength.setEnabled(self._blur.isChecked()); self._blur_preview.setEnabled(self._blur.isChecked()); self._top.setEnabled(self._crop.isChecked()); self._bottom.setEnabled(self._crop.isChecked())
+        save_images = self._export_images.isChecked(); self._same_path.setEnabled(save_images); self._image_path_widget.setEnabled(save_images and not self._same_path.isChecked()); self._blur_strength.setEnabled(self._blur.isChecked()); self._blur_preview.setEnabled(self._blur.isChecked())
         enabled = self._watermark.isChecked()
         for widget in (self._watermark_text, self._watermark_opacity, self._watermark_size, self._watermark_preview): widget.setEnabled(enabled)
         timecode_enabled = self._timecode.isChecked(); self._date.setEnabled(timecode_enabled); self._timecode_background.setEnabled(timecode_enabled); self._timecode_horizontal.setEnabled(timecode_enabled); self._timecode_vertical.setEnabled(timecode_enabled); self._timecode_preview.setEnabled(timecode_enabled)
 
     def _refresh_previews(self) -> None:
-        self._watermark_preview.text = self._watermark_text.text(); self._watermark_preview.size = self._value(self._watermark_size).value(); self._watermark_preview.opacity = self._value(self._watermark_opacity).value(); self._watermark_preview.update(); self._blur_preview.strength = self._value(self._blur_strength).value(); self._blur_preview.update(); self._timecode_preview.date = self._date.isChecked(); self._timecode_preview.background = self._value(self._timecode_background).value(); self._timecode_preview.horizontal = str(self._timecode_horizontal.currentData()); self._timecode_preview.vertical = str(self._timecode_vertical.currentData()); self._timecode_preview.update()
+        self._watermark_preview.text = self._watermark_text.text(); self._watermark_preview.size = self._value(self._watermark_size).value(); self._watermark_preview.opacity = self._value(self._watermark_opacity).value(); self._watermark_preview.update(); self._blur_preview.strength = self._value(self._blur_strength).value(); self._blur_preview.update(); self._mask_preview.top = self._hide_top.isChecked(); self._mask_preview.bottom = self._hide_bottom.isChecked(); self._mask_preview.update(); self._timecode_preview.date = self._date.isChecked(); self._timecode_preview.background = self._value(self._timecode_background).value(); self._timecode_preview.horizontal = str(self._timecode_horizontal.currentData()); self._timecode_preview.vertical = str(self._timecode_vertical.currentData()); self._timecode_preview.update()
 
     def _accept(self) -> None:
         try: options = self.options()
@@ -134,4 +142,4 @@ class GifOutputDialog(QDialog):
         if self._export_images.isChecked() and not self._same_path.isChecked() and not image_text:
             raise ValueError("이미지 저장 경로를 선택하세요.")
         image_root = None if self._same_path.isChecked() or not self._export_images.isChecked() else Path(image_text)
-        return GifOutputOptions(filename=self._filename.text().strip(), gif_export_root=Path(self._gif_path.text().strip()), export_images=self._export_images.isChecked(), images_with_gif=self._same_path.isChecked(), image_export_root=image_root, blur_enabled=self._blur.isChecked(), blur_strength=self._value(self._blur_strength).value(), crop_enabled=self._crop.isChecked(), crop_top_px=self._top.value(), crop_bottom_px=self._bottom.value(), watermark_enabled=self._watermark.isChecked(), watermark_text=self._watermark_text.text(), watermark_opacity_level=self._value(self._watermark_opacity).value(), watermark_size=self._value(self._watermark_size).value(), timecode_enabled=self._timecode.isChecked(), timecode_show_date=self._date.isChecked(), timecode_background_level=self._value(self._timecode_background).value(), timecode_horizontal=str(self._timecode_horizontal.currentData()), timecode_vertical=str(self._timecode_vertical.currentData()))
+        return GifOutputOptions(filename=self._filename.text().strip(), gif_export_root=Path(self._gif_path.text().strip()), export_images=self._export_images.isChecked(), images_with_gif=self._same_path.isChecked(), image_export_root=image_root, crop_enabled=self._hide_top.isChecked() or self._hide_bottom.isChecked(), hide_top=self._hide_top.isChecked(), hide_bottom=self._hide_bottom.isChecked(), blur_enabled=self._blur.isChecked(), blur_strength=self._value(self._blur_strength).value(), watermark_enabled=self._watermark.isChecked(), watermark_text=self._watermark_text.text(), watermark_opacity_level=self._value(self._watermark_opacity).value(), watermark_size=self._value(self._watermark_size).value(), timecode_enabled=self._timecode.isChecked(), timecode_show_date=self._date.isChecked(), timecode_background_level=self._value(self._timecode_background).value(), timecode_horizontal=str(self._timecode_horizontal.currentData()), timecode_vertical=str(self._timecode_vertical.currentData()))

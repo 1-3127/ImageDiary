@@ -205,7 +205,8 @@ class MainWindow(QMainWindow):
         if action is RecoveryAction.RESUME:
             self._controller.resume(candidate)
         elif action is RecoveryAction.FINISH:
-            self._controller.finish_recovered(candidate)
+            self._controller.prepare_recovered_finish(candidate)
+            self._finish()
 
     @staticmethod
     def _open_output_directory(directory: Path) -> None:
