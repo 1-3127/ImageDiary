@@ -4,7 +4,7 @@ from unittest import TestCase
 
 from PySide6.QtCore import QSettings
 
-from settings import AppSettings
+from settings import AppSettings, default_settings
 from settings_repository import SettingsRepository
 
 
@@ -42,3 +42,26 @@ class SettingsRepositoryTests(TestCase):
             loaded = SettingsRepository(backend).load()
 
             self.assertEqual(loaded.capture_interval_seconds, 15 * 60)
+
+    def test_reset_clears_saved_values_and_restores_defaults(self) -> None:
+        with TemporaryDirectory() as temporary_directory:
+            backend = QSettings(
+                str(Path(temporary_directory) / "settings.ini"),
+                QSettings.Format.IniFormat,
+            )
+            repository = SettingsRepository(backend)
+            repository.save(
+                AppSettings(
+                    export_root=Path("D:/CustomWorkDiary"),
+                    capture_interval_seconds=30 * 60,
+                    capture_format="jpg",
+                    image_quality=70,
+                    run_at_login=True,
+                    always_on_top=True,
+                    capture_target="primary",
+                )
+            )
+
+            repository.reset()
+
+            self.assertEqual(repository.load(), default_settings())

@@ -113,15 +113,20 @@ class MainWindow(QMainWindow):
         dialog.exec()
 
     def _reset_settings(self, dialog: SettingsDialog) -> None:
-        answer = QMessageBox.warning(
-            self,
-            "설정 초기화",
-            "앱 설정을 기본값으로 복원하시겠습니까?\n\n"
-            "저장된 이미지와 GIF는 삭제되지 않습니다.",
-            QMessageBox.StandardButton.Reset | QMessageBox.StandardButton.Cancel,
-            QMessageBox.StandardButton.Cancel,
+        confirmation = QMessageBox(self)
+        confirmation.setIcon(QMessageBox.Icon.Warning)
+        confirmation.setWindowTitle("설정 초기화")
+        confirmation.setText("앱 설정을 기본값으로 복원하시겠습니까?")
+        confirmation.setInformativeText(
+            "Windows 로그인 시 시작도 해제됩니다.\n\n"
+            "저장된 이미지와 GIF는 삭제되지 않습니다."
         )
-        if answer is not QMessageBox.StandardButton.Reset:
+        reset_button = confirmation.addButton(
+            "초기화", QMessageBox.ButtonRole.DestructiveRole
+        )
+        confirmation.addButton("취소", QMessageBox.ButtonRole.RejectRole)
+        confirmation.exec()
+        if confirmation.clickedButton() is not reset_button:
             return
         try:
             self._startup_manager.set_enabled(False)
