@@ -152,14 +152,13 @@ class SessionController(QObject):
                 self._session_settings.gif_loop,
                 self.encoding_progress.emit,
             )
-            if self._session_settings.export_screenshots_on_finish:
-                for screenshot in self._screenshots_directory.iterdir():
-                    if screenshot.is_file():
-                        self._file_exporter.copy_screenshot(
-                            screenshot,
-                            self._session_settings.export_root,
-                            self._session_directory.name,
-                        )
+            for screenshot in self._screenshots_directory.iterdir():
+                if screenshot.is_file():
+                    self._file_exporter.copy_screenshot(
+                        screenshot,
+                        self._session_settings.export_root,
+                        self._session_directory.name,
+                    )
             exported_gif = self._file_exporter.copy_gif(
                 gif_path,
                 self._session_settings.export_root,
@@ -190,6 +189,7 @@ class SessionController(QObject):
                 sequence_number=self._capture_count + 1,
                 image_format=self._session_settings.capture_format,
                 image_quality=self._session_settings.image_quality,
+                capture_target=self._session_settings.capture_target,
             )
             self._capture_count += 1
             self.capture_count_changed.emit(self._capture_count)

@@ -109,7 +109,34 @@ class MainWindow(QMainWindow):
     def _open_settings(self) -> None:
         dialog = SettingsDialog(self._settings, self)
         dialog.settings_saved.connect(self._save_settings)
+        dialog.reset_requested.connect(lambda: self._reset_settings(dialog))
         dialog.exec()
+
+    def _reset_settings(self, dialog: SettingsDialog) -> None:
+        answer = QMessageBox.warning(
+            self,
+            "설정 초기화",
+            "앱 설정을 기본값으로 복원하시겠습니까?\n\n"
+            "저장된 이미지와 GIF는 삭제되지 않습니다.",
+            QMessageBox.StandardButton.Reset | QMessageBox.StandardButton.Cancel,
+            QMessageBox.StandardButton.Cancel,
+        )
+        if answer is not QMessageBox.StandardButton.Reset:
+            return
+        try:
+            self._startup_manager.set_enabled(False)
+        except StartupRegistrationError as error:
+            QMessageBox.critical(self, "설정 초기화 실패", str(error))
+            return
+        self._settings_repository.reset()
+        self._settings = self._settings_repository.load()
+        self._controller.update_settings(self._settings)
+        dialog.reject()
+        QMessageBox.information(
+            self,
+            "설정 초기화",
+            "설정을 기본값으로 복원했습니다.",
+        )
 
     def _save_settings(self, settings: object) -> None:
         if not isinstance(settings, AppSettings):

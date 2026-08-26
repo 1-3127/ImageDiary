@@ -8,9 +8,8 @@ from pathlib import Path
 
 INTERNAL_STORAGE_ROOT = Path(r"C:\temp\workdiary")
 SUPPORTED_CAPTURE_FORMATS = ("png", "webp", "jpg")
-SUPPORTED_CAPTURE_INTERVAL_SECONDS = (60,) + tuple(
-    minutes * 60 for minutes in range(10, 31, 5)
-)
+SUPPORTED_CAPTURE_INTERVAL_SECONDS = tuple(minutes * 60 for minutes in range(5, 31, 5))
+SUPPORTED_CAPTURE_TARGETS = ("primary", "all")
 
 
 def default_export_root() -> Path:
@@ -35,7 +34,7 @@ class AppSettings:
     gif_frame_duration_ms: int = 500
     gif_loop: int = 0
     open_output_on_finish: bool = True
-    export_screenshots_on_finish: bool = True
+    capture_target: str = "all"
     internal_storage_root: Path = INTERNAL_STORAGE_ROOT
 
     def __post_init__(self) -> None:
@@ -47,6 +46,8 @@ class AppSettings:
             raise ValueError("internal_retention_days must be at least 1")
         if self.capture_interval_seconds not in SUPPORTED_CAPTURE_INTERVAL_SECONDS:
             raise ValueError("Unsupported capture interval")
+        if self.capture_target not in SUPPORTED_CAPTURE_TARGETS:
+            raise ValueError("Unsupported capture target")
 
     @property
     def storage_root(self) -> Path:

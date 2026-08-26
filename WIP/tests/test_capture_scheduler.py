@@ -25,9 +25,9 @@ class NextCaptureTimeTests(TestCase):
         now = datetime(2026, 8, 25, 19, 7, 12)
         self.assertEqual(next_capture_time(now, 25 * 60), datetime(2026, 8, 25, 19, 10))
 
-    def test_one_minute_debug_boundary(self) -> None:
+    def test_five_minute_boundary(self) -> None:
         now = datetime(2026, 8, 25, 19, 7, 12)
-        self.assertEqual(next_capture_time(now, 60), datetime(2026, 8, 25, 19, 8))
+        self.assertEqual(next_capture_time(now, 5 * 60), datetime(2026, 8, 25, 19, 10))
 
     def test_rejects_unsupported_interval(self) -> None:
         with self.assertRaises(ValueError):

@@ -21,6 +21,7 @@ class ScreenshotCapture:
         sequence_number: int = 1,
         image_format: str = "png",
         image_quality: int = 85,
+        capture_target: str = "all",
     ) -> Path:
         """선택한 포맷으로 한 장을 저장하고 실제 절대 경로를 반환한다."""
 
@@ -30,6 +31,8 @@ class ScreenshotCapture:
             raise ScreenshotCaptureError("캡처 순번은 1 이상이어야 합니다.")
         if normalized_format not in {"png", "webp", "jpg"}:
             raise ScreenshotCaptureError(f"지원하지 않는 이미지 포맷: {image_format}")
+        if capture_target not in {"primary", "all"}:
+            raise ScreenshotCaptureError(f"지원하지 않는 캡처 대상: {capture_target}")
         output_path = output_directory / f"{sequence_number:03d}.{normalized_format}"
         if output_path.exists():
             raise ScreenshotCaptureError(
@@ -38,8 +41,12 @@ class ScreenshotCapture:
 
         try:
             with mss.mss() as screen_capture:
-                virtual_screen = screen_capture.monitors[0]
-                raw_image = screen_capture.grab(virtual_screen)
+                monitor = (
+                    screen_capture.monitors[1]
+                    if capture_target == "primary"
+                    else screen_capture.monitors[0]
+                )
+                raw_image = screen_capture.grab(monitor)
                 image = Image.frombytes("RGB", raw_image.size, raw_image.rgb)
                 save_options: dict[str, object] = {}
                 pillow_format = normalized_format.upper()

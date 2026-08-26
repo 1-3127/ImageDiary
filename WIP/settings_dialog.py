@@ -30,6 +30,7 @@ from data_cleanup import find_cleanup_candidates, move_old_sessions_to_trash
 
 class SettingsDialog(QDialog):
     settings_saved = Signal(object)
+    reset_requested = Signal()
 
     def __init__(self, settings: AppSettings, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -49,7 +50,7 @@ class SettingsDialog(QDialog):
         interval_layout = QHBoxLayout(interval_widget)
         interval_layout.setContentsMargins(0, 0, 0, 0)
         self._interval = QSlider(Qt.Orientation.Horizontal, interval_widget)
-        self._interval.setRange(10, 30)
+        self._interval.setRange(5, 30)
         self._interval.setSingleStep(5)
         self._interval.setPageStep(5)
         self._interval.setTickInterval(5)
@@ -62,13 +63,13 @@ class SettingsDialog(QDialog):
         interval_layout.addWidget(self._interval_value)
         form.addRow("캡처 간격:", interval_widget)
 
-        self._debug_interval = QCheckBox("1분 간격 사용 (디버그)", self)
-        self._debug_interval.setChecked(
-            self._settings.capture_interval_seconds == 60
+        self._capture_target = QComboBox(self)
+        self._capture_target.addItem("메인 모니터만", "primary")
+        self._capture_target.addItem("전체 화면", "all")
+        self._capture_target.setCurrentIndex(
+            max(0, self._capture_target.findData(self._settings.capture_target))
         )
-        self._debug_interval.toggled.connect(self._interval.setDisabled)
-        self._interval.setDisabled(self._debug_interval.isChecked())
-        form.addRow("", self._debug_interval)
+        form.addRow("캡처 대상:", self._capture_target)
 
         self._format = QComboBox(self)
         self._format.addItems(list(SUPPORTED_CAPTURE_FORMATS))
@@ -85,15 +86,6 @@ class SettingsDialog(QDialog):
         self._run_at_login.setChecked(self._settings.run_at_login)
         form.addRow("", self._run_at_login)
 
-        self._export_screenshots = QCheckBox("종료 시 이미지 전체 저장하기", self)
-        self._export_screenshots.setChecked(
-            self._settings.export_screenshots_on_finish
-        )
-        self._export_screenshots.setToolTip(
-            "끄면 사용자 저장 경로에는 GIF만 저장됩니다. 내부 원본은 유지됩니다."
-        )
-        form.addRow("", self._export_screenshots)
-
         note = QLabel("진행 중 변경한 설정은 다음 세션부터 적용됩니다.", self)
         note.setWordWrap(True)
 
@@ -102,6 +94,12 @@ class SettingsDialog(QDialog):
             "내부 원본 중 최신 2개 세션을 제외한 폴더를 휴지통으로 이동"
         )
         cleanup_button.clicked.connect(self._cleanup_data)
+        reset_button = QPushButton("설정 초기화", self)
+        reset_button.clicked.connect(self.reset_requested.emit)
+        help_button = QPushButton("도움말", self)
+        help_button.clicked.connect(self._show_help)
+        about_button = QPushButton("앱 정보", self)
+        about_button.clicked.connect(self._show_about)
 
         buttons = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Save | QDialogButtonBox.StandardButton.Cancel,
@@ -115,6 +113,9 @@ class SettingsDialog(QDialog):
         layout.addLayout(form)
         layout.addWidget(note)
         layout.addWidget(cleanup_button)
+        layout.addWidget(reset_button)
+        layout.addWidget(help_button)
+        layout.addWidget(about_button)
         layout.addWidget(buttons)
 
     def _path_row(self, line_edit: QLineEdit, label: str) -> QWidget:
@@ -144,23 +145,40 @@ class SettingsDialog(QDialog):
         updated = replace(
             self._settings,
             export_root=Path(export_path),
-            capture_interval_seconds=(
-                60 if self._debug_interval.isChecked() else self._interval.value() * 60
-            ),
+            capture_interval_seconds=self._interval.value() * 60,
+            capture_target=str(self._capture_target.currentData()),
             capture_format=self._format.currentText(),
             image_quality=self._quality.value(),
             run_at_login=self._run_at_login.isChecked(),
-            export_screenshots_on_finish=self._export_screenshots.isChecked(),
         )
         self.settings_saved.emit(updated)
         self.accept()
 
     def _snap_interval(self, value: int) -> None:
-        snapped = min(30, max(10, round(value / 5) * 5))
+        snapped = min(30, max(5, round(value / 5) * 5))
         if snapped != value:
             self._interval.setValue(snapped)
             return
         self._interval_value.setText(f"{snapped}분")
+
+    def _show_help(self) -> None:
+        QMessageBox.information(
+            self,
+            "도움말",
+            "시작을 누르면 즉시 한 장을 캡처하고, 이후 선택한 시스템 시각 경계마다 캡처합니다.\n\n"
+            "종료 및 GIF 생성을 누르면 공유용 GIF 출력 설정을 선택할 수 있습니다.\n\n"
+            "내부 원본은 최근 수정 세션 2개를 보호하며, 나머지는 마지막 활동 후 7일이 지나면 자동 정리됩니다.",
+        )
+
+    def _show_about(self) -> None:
+        QMessageBox.information(
+            self,
+            "ImageDiary 정보",
+            "ImageDiary v0.3 개발 중\n"
+            "빌드 날짜: 2026-08-26\n"
+            "실행 경로: 프로그램 설치 위치\n\n"
+            "Python, PySide6, mss, Pillow 기반",
+        )
 
     def _cleanup_data(self) -> None:
         internal_root = self._settings.internal_storage_root

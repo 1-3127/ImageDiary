@@ -69,12 +69,11 @@ class MainWindowTests(TestCase):
         dialog = SettingsDialog(default_settings())
 
         self.assertEqual(dialog._export_path.text(), str(default_settings().export_root))
-        self.assertEqual(dialog._interval.minimum(), 10)
+        self.assertEqual(dialog._interval.minimum(), 5)
         self.assertEqual(dialog._interval.maximum(), 30)
         self.assertEqual(dialog._interval.singleStep(), 5)
         self.assertEqual(dialog._interval.value(), 15)
-        self.assertFalse(dialog._debug_interval.isChecked())
-        self.assertTrue(dialog._export_screenshots.isChecked())
+        self.assertEqual(dialog._capture_target.currentData(), "all")
         dialog.close()
 
     def test_data_cleanup_targets_internal_storage_only(self) -> None:

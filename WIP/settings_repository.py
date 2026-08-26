@@ -10,6 +10,7 @@ from settings import (
     AppSettings,
     SUPPORTED_CAPTURE_FORMATS,
     SUPPORTED_CAPTURE_INTERVAL_SECONDS,
+    SUPPORTED_CAPTURE_TARGETS,
     default_settings,
 )
 
@@ -40,10 +41,16 @@ class SettingsRepository:
         )
         if capture_interval_seconds not in SUPPORTED_CAPTURE_INTERVAL_SECONDS:
             capture_interval_seconds = defaults.capture_interval_seconds
+        capture_target = str(
+            self._backend.value("capture/target", defaults.capture_target)
+        )
+        if capture_target not in SUPPORTED_CAPTURE_TARGETS:
+            capture_target = defaults.capture_target
 
         return AppSettings(
             export_root=Path(str(export_root)),
             capture_interval_seconds=capture_interval_seconds,
+            capture_target=capture_target,
             capture_format=capture_format,
             image_quality=int(
                 self._backend.value("capture/image_quality", defaults.image_quality)
@@ -73,12 +80,6 @@ class SettingsRepository:
                     defaults.open_output_on_finish,
                 )
             ),
-            export_screenshots_on_finish=self._as_bool(
-                self._backend.value(
-                    "export/screenshots_on_finish",
-                    defaults.export_screenshots_on_finish,
-                )
-            ),
         )
 
     def save(self, settings: AppSettings) -> None:
@@ -87,6 +88,7 @@ class SettingsRepository:
             "capture/interval_seconds", settings.capture_interval_seconds
         )
         self._backend.setValue("capture/format", settings.capture_format)
+        self._backend.setValue("capture/target", settings.capture_target)
         self._backend.setValue("capture/image_quality", settings.image_quality)
         self._backend.setValue("startup/run_at_login", settings.run_at_login)
         self._backend.setValue("window/always_on_top", settings.always_on_top)
@@ -98,9 +100,10 @@ class SettingsRepository:
         self._backend.setValue(
             "window/open_output_on_finish", settings.open_output_on_finish
         )
-        self._backend.setValue(
-            "export/screenshots_on_finish", settings.export_screenshots_on_finish
-        )
+        self._backend.sync()
+
+    def reset(self) -> None:
+        self._backend.clear()
         self._backend.sync()
 
     @staticmethod

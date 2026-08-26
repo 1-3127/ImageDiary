@@ -101,13 +101,12 @@ class SessionControllerTests(TestCase):
             exported_session = root / "export" / "260825"
             self.assertTrue((exported_session / "Diary_2030-2045.gif").is_file())
 
-    def test_can_export_only_gif_on_finish(self) -> None:
+    def test_exports_screenshots_with_gif_on_finish(self) -> None:
         with TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)
             controller = SessionController(
                 AppSettings(
                     root / "export",
-                    export_screenshots_on_finish=False,
                     internal_storage_root=root / "internal",
                 )
             )
@@ -125,7 +124,7 @@ class SessionControllerTests(TestCase):
             controller.finish()
 
             self.assertEqual(len(list(outputs[0].glob("Diary_*.gif"))), 1)
-            self.assertFalse((outputs[0] / "Screenshot").exists())
+            self.assertTrue((outputs[0] / "Screenshot").is_dir())
 
     def test_settings_changed_during_session_apply_next_time(self) -> None:
         with TemporaryDirectory() as temporary_directory:

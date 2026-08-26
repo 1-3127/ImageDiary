@@ -68,3 +68,19 @@ class ScreenshotCaptureTests(TestCase):
 
                     self.assertEqual(output.name, f"007.{image_format}")
                     self.assertTrue(output.is_file())
+
+    def test_uses_primary_monitor_when_requested(self) -> None:
+        with TemporaryDirectory() as temporary_directory:
+            with patch("screenshot_capture.mss.mss") as mocked_mss:
+                capture = mocked_mss.return_value.__enter__.return_value
+                capture.monitors = [{"id": 0}, {"id": 1}]
+                raw_image = capture.grab.return_value
+                raw_image.size = (2, 1)
+                raw_image.rgb = b"\xff\x00\x00\x00\x00\xff"
+
+                ScreenshotCapture().capture(
+                    Path(temporary_directory),
+                    capture_target="primary",
+                )
+
+                capture.grab.assert_called_once_with({"id": 1})
