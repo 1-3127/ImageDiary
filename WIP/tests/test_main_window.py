@@ -11,6 +11,7 @@ from PySide6.QtCore import QSettings
 from PySide6.QtWidgets import QApplication
 
 from app import MainWindow
+from gif_output_dialog import GifOutputDialog
 from settings import AppSettings, default_settings
 from settings_dialog import SettingsDialog
 from settings_repository import SettingsRepository
@@ -74,6 +75,17 @@ class MainWindowTests(TestCase):
         self.assertEqual(dialog._interval.singleStep(), 5)
         self.assertEqual(dialog._interval.value(), 15)
         self.assertEqual(dialog._capture_target.currentData(), "all")
+        dialog.close()
+
+    def test_gif_output_dialog_defaults_to_exporting_images_with_gif(self) -> None:
+        dialog = GifOutputDialog("Diary_0900-1800.gif", Path("D:/WorkDiary"))
+
+        options = dialog.options()
+
+        self.assertEqual(options.filename, "Diary_0900-1800.gif")
+        self.assertTrue(options.export_images)
+        self.assertTrue(options.images_with_gif)
+        self.assertEqual(options.blur_regions, ())
         dialog.close()
 
     def test_data_cleanup_targets_internal_storage_only(self) -> None:

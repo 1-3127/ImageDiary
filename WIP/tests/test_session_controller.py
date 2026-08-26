@@ -8,6 +8,7 @@ from unittest.mock import patch
 
 from PIL import Image
 
+from gif_output_options import GifOutputOptions
 from session_controller import SessionController, SessionState
 from session_recovery import RecoveryCandidate
 from settings import AppSettings
@@ -125,6 +126,34 @@ class SessionControllerTests(TestCase):
 
             self.assertEqual(len(list(outputs[0].glob("Diary_*.gif"))), 1)
             self.assertTrue((outputs[0] / "Screenshot").is_dir())
+
+    def test_can_export_only_custom_named_gif(self) -> None:
+        with TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            controller = SessionController(
+                AppSettings(
+                    root / "export",
+                    internal_storage_root=root / "internal",
+                )
+            )
+
+            def create_test_capture(output_directory: Path, **_options: object) -> Path:
+                output_path = output_directory / "001.png"
+                Image.new("RGB", (8, 8), "green").save(output_path)
+                return output_path
+
+            controller._screenshot_capture.capture = create_test_capture
+            controller.start()
+            controller.finish(
+                GifOutputOptions(
+                    filename="shared-work.gif",
+                    export_images=False,
+                )
+            )
+
+            exported_session = next((root / "export").iterdir())
+            self.assertTrue((exported_session / "shared-work.gif").is_file())
+            self.assertFalse((exported_session / "Screenshot").exists())
 
     def test_settings_changed_during_session_apply_next_time(self) -> None:
         with TemporaryDirectory() as temporary_directory:

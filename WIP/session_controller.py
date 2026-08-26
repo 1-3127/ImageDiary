@@ -11,6 +11,8 @@ from PySide6.QtCore import QObject, Signal
 from capture_scheduler import CaptureScheduler
 from file_exporter import FileExportError, FileExporter
 from gif_builder import GifBuilder
+from gif_output_options import GifOutputOptions
+from gif_post_processor import GifPostProcessor
 from image_order import sorted_image_paths
 from screenshot_capture import ScreenshotCapture, ScreenshotCaptureError
 from settings import AppSettings
@@ -124,7 +126,19 @@ class SessionController(QObject):
         self._set_state(SessionState.RECORDING)
         self.finish()
 
-    def finish(self) -> None:
+    def default_gif_filename(self) -> str | None:
+        if self._screenshots_directory is None or self._session_directory is None:
+            return None
+        image_paths = sorted_image_paths(self._screenshots_directory)
+        if not image_paths:
+            return None
+        return self._storage.gif_output_path(
+            self._session_directory,
+            image_paths[0],
+            image_paths[-1],
+        ).name
+
+    def finish(self, output_options: GifOutputOptions | None = None) -> None:
         if self._state is not SessionState.RECORDING:
             return
         if self._scheduler is not None:
@@ -140,30 +154,48 @@ class SessionController(QObject):
             image_paths = sorted_image_paths(self._screenshots_directory)
             if not image_paths:
                 raise ValueError("No screenshots are available for GIF generation.")
+            if output_options is None:
+                output_options = GifOutputOptions(
+                    filename=self._storage.gif_output_path(
+                        self._session_directory,
+                        image_paths[0],
+                        image_paths[-1],
+                    ).name
+                )
             gif_path = self._storage.gif_output_path(
                 self._session_directory,
                 image_paths[0],
                 image_paths[-1],
+                output_options.filename,
             )
+            frame_processor = GifPostProcessor(output_options).process
             frame_count = self._gif_builder.build(
                 self._screenshots_directory,
                 gif_path,
                 self._session_settings.gif_frame_duration_ms,
                 self._session_settings.gif_loop,
                 self.encoding_progress.emit,
+                frame_processor,
             )
-            for screenshot in self._screenshots_directory.iterdir():
-                if screenshot.is_file():
-                    self._file_exporter.copy_screenshot(
-                        screenshot,
-                        self._session_settings.export_root,
-                        self._session_directory.name,
-                    )
             exported_gif = self._file_exporter.copy_gif(
                 gif_path,
                 self._session_settings.export_root,
                 self._session_directory.name,
             )
+            if output_options.export_images:
+                image_root = (
+                    self._session_settings.export_root
+                    if output_options.images_with_gif
+                    else output_options.image_export_root
+                )
+                assert image_root is not None
+                for screenshot in self._screenshots_directory.iterdir():
+                    if screenshot.is_file():
+                        self._file_exporter.copy_screenshot(
+                            screenshot,
+                            image_root,
+                            self._session_directory.name,
+                        )
             self.status_changed.emit(f"완료: {frame_count}프레임")
         except ValueError:
             self.status_changed.emit("캡처 이미지가 없어 GIF를 생성하지 않았습니다")

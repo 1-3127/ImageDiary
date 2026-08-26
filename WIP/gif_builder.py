@@ -9,6 +9,8 @@ from PIL import Image
 
 from image_order import sorted_image_paths
 
+FrameProcessor = Callable[[Image.Image, Path], Image.Image]
+
 
 class GifBuilder:
     def build(
@@ -18,6 +20,7 @@ class GifBuilder:
         frame_duration_ms: int,
         loop: int,
         progress_callback: Callable[[int, int], None] | None = None,
+        frame_processor: FrameProcessor | None = None,
     ) -> int:
         image_paths = sorted_image_paths(screenshots_directory)
         if not image_paths:
@@ -30,7 +33,14 @@ class GifBuilder:
         try:
             for index, image_path in enumerate(image_paths, start=1):
                 with Image.open(image_path) as source:
-                    frames.append(source.convert("RGB"))
+                    frame = source.convert("RGB")
+                if frame_processor is not None:
+                    try:
+                        frame = frame_processor(frame, image_path)
+                    except Exception:
+                        frame.close()
+                        raise
+                frames.append(frame)
                 if progress_callback is not None:
                     progress_callback(index, progress_total)
 

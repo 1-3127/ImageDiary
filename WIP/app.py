@@ -18,6 +18,7 @@ from PySide6.QtWidgets import (
 )
 
 from gif_progress_dialog import GifProgressDialog
+from gif_output_dialog import GifOutputDialog
 from recovery_dialog import RecoveryAction, ask_recovery_action
 from session_controller import SessionController, SessionState
 from session_recovery import find_latest_incomplete_session
@@ -78,7 +79,7 @@ class MainWindow(QMainWindow):
 
     def _connect_signals(self) -> None:
         self._start_button.clicked.connect(self._start)
-        self._finish_button.clicked.connect(self._controller.finish)
+        self._finish_button.clicked.connect(self._finish)
         self._pin_button.toggled.connect(self._pin_toggled)
         self._settings_button.clicked.connect(self._open_settings)
         self._controller.state_changed.connect(self._apply_state)
@@ -94,6 +95,23 @@ class MainWindow(QMainWindow):
 
     def _start(self) -> None:
         self._controller.start()
+
+    def _finish(self) -> None:
+        default_filename = self._controller.default_gif_filename()
+        if default_filename is None:
+            QMessageBox.warning(
+                self,
+                "GIF 생성",
+                "캡처 이미지가 없어 GIF를 생성할 수 없습니다.",
+            )
+            return
+        dialog = GifOutputDialog(
+            default_filename,
+            self._settings.export_root,
+            self,
+        )
+        if dialog.exec():
+            self._controller.finish(dialog.options())
 
     def _apply_state(self, state: SessionState) -> None:
         is_idle = state is SessionState.IDLE

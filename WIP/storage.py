@@ -39,8 +39,12 @@ class SessionStorage:
         session_directory: Path,
         first_image: Path,
         last_image: Path,
+        filename: str | None = None,
     ) -> Path:
         first_time = datetime.fromtimestamp(first_image.stat().st_mtime)
         last_time = datetime.fromtimestamp(last_image.stat().st_mtime)
-        filename = f"Diary_{first_time:%H%M}-{last_time:%H%M}.gif"
+        filename = filename or f"Diary_{first_time:%H%M}-{last_time:%H%M}.gif"
+        filename = Path(filename).name
+        if Path(filename).suffix.lower() != ".gif":
+            filename = f"{filename}.gif"
         return session_directory / filename
