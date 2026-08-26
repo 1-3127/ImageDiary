@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 from pathlib import Path
 
-from PIL import Image, ImageDraw, ImageFilter
+from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 from gif_output_options import GifOutputOptions
 
@@ -16,7 +16,8 @@ class GifPostProcessor:
 
     def process(self, frame: Image.Image, source_path: Path) -> Image.Image:
         processed = frame.convert("RGB")
-        self._apply_blur(processed)
+        if self._options.blur_enabled:
+            processed = self._apply_blur(processed)
         processed = self._crop(processed)
         if self._options.watermark_enabled and self._options.watermark_text.strip():
             self._apply_watermark(processed)
@@ -24,18 +25,11 @@ class GifPostProcessor:
             self._apply_timecode(processed, source_path)
         return processed
 
-    def _apply_blur(self, frame: Image.Image) -> None:
-        for x, y, width, height in self._options.blur_regions:
-            left = max(0, x)
-            top = max(0, y)
-            right = min(frame.width, x + width)
-            bottom = min(frame.height, y + height)
-            if right <= left or bottom <= top:
-                continue
-            box = (left, top, right, bottom)
-            region = frame.crop(box).filter(ImageFilter.GaussianBlur(radius=12))
-            frame.paste(region, box)
-            region.close()
+    def _apply_blur(self, frame: Image.Image) -> Image.Image:
+        radius = {1: 6, 2: 14, 3: 24}[self._options.blur_strength]
+        blurred = frame.filter(ImageFilter.GaussianBlur(radius=radius))
+        frame.close()
+        return blurred
 
     def _crop(self, frame: Image.Image) -> Image.Image:
         top = self._options.crop_top_px
@@ -50,16 +44,29 @@ class GifPostProcessor:
         return cropped
 
     def _apply_watermark(self, frame: Image.Image) -> None:
-        overlay = Image.new("RGBA", frame.size, (0, 0, 0, 0))
-        draw = ImageDraw.Draw(overlay)
         text = self._options.watermark_text.strip()
-        step_x = max(180, len(text) * 12)
-        step_y = 100
-        fill = (255, 255, 255, self._options.watermark_opacity)
+        font_size = {1: 16, 2: 26, 3: 40}[self._options.watermark_size]
+        opacity = {1: 64, 2: 112, 3: 168}[self._options.watermark_opacity_level]
+        font = ImageFont.load_default(size=font_size)
+        bounds = ImageDraw.Draw(Image.new("RGBA", (1, 1))).textbbox(
+            (0, 0), text, font=font
+        )
+        tile = Image.new(
+            "RGBA",
+            (bounds[2] - bounds[0] + 24, bounds[3] - bounds[1] + 24),
+            (0, 0, 0, 0),
+        )
+        ImageDraw.Draw(tile).text((12, 12), text, font=font, fill=(255, 255, 255, opacity))
+        rotated = tile.rotate(45, expand=True)
+        overlay = Image.new("RGBA", frame.size, (0, 0, 0, 0))
+        step_x = max(180, rotated.width + 80)
+        step_y = max(110, rotated.height + 50)
         for y in range(-step_y, frame.height + step_y, step_y):
             for x in range(-step_x, frame.width + step_x, step_x):
-                draw.text((x, y), text, fill=fill)
+                overlay.alpha_composite(rotated, (x, y))
         frame.paste(overlay, (0, 0), overlay)
+        rotated.close()
+        tile.close()
         overlay.close()
 
     def _apply_timecode(self, frame: Image.Image, source_path: Path) -> None:
@@ -72,10 +79,10 @@ class GifPostProcessor:
         draw = ImageDraw.Draw(frame, "RGBA")
         left, top, right, bottom = draw.textbbox((0, 0), text)
         padding = 8
-        x = max(padding, frame.width - (right - left) - padding)
-        y = max(padding, frame.height - (bottom - top) - padding)
+        x = 10
+        y = max(padding, frame.height // 4)
         draw.rectangle(
-            (x - padding, y - padding, frame.width, frame.height),
+            (x - padding, y - padding, x + (right - left) + padding, y + (bottom - top) + padding),
             fill=(0, 0, 0, 150),
         )
         draw.text((x, y), text, fill=(255, 255, 255, 255))

@@ -85,7 +85,8 @@ class MainWindowTests(TestCase):
         self.assertEqual(options.filename, "Diary_0900-1800.gif")
         self.assertTrue(options.export_images)
         self.assertTrue(options.images_with_gif)
-        self.assertEqual(options.blur_regions, ())
+        self.assertFalse(options.blur_enabled)
+        self.assertEqual(options.gif_export_root, Path("D:/WorkDiary"))
         dialog.close()
 
     def test_data_cleanup_targets_internal_storage_only(self) -> None:

@@ -6,23 +6,23 @@ from dataclasses import dataclass
 from pathlib import Path
 
 
-BlurRegion = tuple[int, int, int, int]
-
-
 @dataclass(frozen=True)
 class GifOutputOptions:
     """원본 Screenshot을 바꾸지 않는 GIF 및 외부 복사 옵션."""
 
     filename: str
+    gif_export_root: Path | None = None
     export_images: bool = True
     images_with_gif: bool = True
     image_export_root: Path | None = None
-    blur_regions: tuple[BlurRegion, ...] = ()
+    blur_enabled: bool = False
+    blur_strength: int = 2
     crop_top_px: int = 0
     crop_bottom_px: int = 0
     watermark_enabled: bool = False
     watermark_text: str = "ImageDiary"
-    watermark_opacity: int = 96
+    watermark_opacity_level: int = 2
+    watermark_size: int = 2
     timecode_enabled: bool = False
     timecode_show_date: bool = True
 
@@ -34,9 +34,10 @@ class GifOutputOptions:
             filename = f"{filename}.gif"
         if self.crop_top_px < 0 or self.crop_bottom_px < 0:
             raise ValueError("크롭 값은 0 이상이어야 합니다.")
-        if not 0 <= self.watermark_opacity <= 255:
-            raise ValueError("워터마크 투명도 범위가 올바르지 않습니다.")
-        for region in self.blur_regions:
-            if len(region) != 4 or region[2] <= 0 or region[3] <= 0:
-                raise ValueError("블러 영역은 x, y, 너비, 높이 형식이어야 합니다.")
+        if self.blur_strength not in {1, 2, 3}:
+            raise ValueError("블러 강도는 약, 중, 강 중 하나여야 합니다.")
+        if self.watermark_opacity_level not in {1, 2, 3}:
+            raise ValueError("워터마크 투명도는 약, 중, 강 중 하나여야 합니다.")
+        if self.watermark_size not in {1, 2, 3}:
+            raise ValueError("워터마크 크기는 작게, 중간, 크게 중 하나여야 합니다.")
         object.__setattr__(self, "filename", filename)

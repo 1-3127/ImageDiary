@@ -179,12 +179,12 @@ class SessionController(QObject):
             )
             exported_gif = self._file_exporter.copy_gif(
                 gif_path,
-                self._session_settings.export_root,
+                output_options.gif_export_root or self._session_settings.export_root,
                 self._session_directory.name,
             )
             if output_options.export_images:
                 image_root = (
-                    self._session_settings.export_root
+                    output_options.gif_export_root or self._session_settings.export_root
                     if output_options.images_with_gif
                     else output_options.image_export_root
                 )
