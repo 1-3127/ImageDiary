@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import replace
 from pathlib import Path
+import sys
 
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
@@ -176,7 +177,7 @@ class SettingsDialog(QDialog):
             "ImageDiary 정보",
             "ImageDiary v0.3 개발 중\n"
             "빌드 날짜: 2026-08-26\n"
-            "실행 경로: 프로그램 설치 위치\n\n"
+            f"실행 경로: {Path(sys.executable).resolve()}\n\n"
             "Python, PySide6, mss, Pillow 기반",
         )
 
