@@ -62,11 +62,11 @@ class GifOutputDialog(QDialog):
     def _build(self, filename: str) -> None:
         layout = QVBoxLayout(self); tabs = QTabWidget(self); layout.addWidget(tabs)
         storage_page = QWidget(tabs); storage_layout = QVBoxLayout(storage_page)
-        group = QGroupBox("저장 위치", self); form = QFormLayout(group)
+        group = QGroupBox("저장 설정", self); form = QFormLayout(group)
         self._filename = QLineEdit(filename, group); self._gif_path, gif_widget = self._path_widget(group); self._image_path, image_widget = self._path_widget(group)
         self._export_images = QCheckBox("원본 이미지 저장", group); self._export_images.setChecked(False)
         self._same_path = QCheckBox("GIF와 같은 경로에 원본 이미지 저장", group); self._same_path.setChecked(True)
-        form.addRow("GIF 이름", self._filename); form.addRow("GIF 저장 경로", gif_widget); form.addRow(self._export_images); form.addRow("이미지 저장 경로", image_widget); form.addRow(self._same_path); storage_layout.addWidget(group); storage_layout.addWidget(QLabel("GIF와 원본 이미지의 외부 저장 위치를 정합니다.", storage_page)); storage_layout.addStretch(); tabs.addTab(storage_page, "저장 위치")
+        form.addRow("GIF 이름", self._filename); form.addRow("GIF 저장 경로", gif_widget); form.addRow(self._export_images); form.addRow("이미지 저장 경로", image_widget); form.addRow(self._same_path); storage_layout.addWidget(group); storage_layout.addWidget(QLabel("GIF와 원본 이미지의 외부 저장 위치를 정합니다.", storage_page)); storage_layout.addStretch(); tabs.addTab(storage_page, "저장 설정")
         self._image_path_widget = image_widget
 
         mask_page = QWidget(tabs); mask_layout = QVBoxLayout(mask_page); group = QGroupBox("블러 및 가리기", mask_page); form = QFormLayout(group)
@@ -74,7 +74,7 @@ class GifOutputDialog(QDialog):
         self._blur_preview = _BlurPreview(group)
         self._hide_top = QCheckBox("상단 가리기 (50px)", group); self._hide_bottom = QCheckBox("하단 가리기 (50px)", group); self._mask_preview = _MaskPreview(group)
         form.addRow(self._blur); form.addRow("블러 강도", self._blur_strength); form.addRow("블러 미리보기", self._blur_preview); form.addRow(self._hide_top); form.addRow(self._hide_bottom); form.addRow("가리기 미리보기", self._mask_preview)
-        mask_layout.addWidget(group); mask_layout.addWidget(QLabel("전체 블러와 상·하단 50px 가리기를 적용합니다.", mask_page)); mask_layout.addStretch(); tabs.addTab(mask_page, "블러/마스크")
+        mask_layout.addWidget(group); mask_layout.addWidget(QLabel("전체 블러와 상·하단 50px 가리기를 적용합니다.", mask_page)); mask_layout.addStretch(); tabs.addTab(mask_page, "블러/가리기")
         watermark_page = QWidget(tabs); watermark_layout = QVBoxLayout(watermark_page); group = QGroupBox("워터마크", watermark_page); form = QFormLayout(group)
         self._watermark = QCheckBox("반복 워터마크", group); self._watermark_text = QLineEdit("ImageDiary", group); self._watermark_opacity = self._slider(group, "약", "중", "강"); self._watermark_size = self._slider(group, "작게", "중간", "크게"); self._watermark_preview = _Preview(True, group)
         form.addRow(self._watermark); form.addRow("워터마크 문구", self._watermark_text); form.addRow("워터마크 선명도", self._watermark_opacity); form.addRow("워터마크 크기", self._watermark_size); form.addRow("워터마크 미리보기", self._watermark_preview); watermark_layout.addWidget(group); watermark_layout.addWidget(QLabel("반시계 45° 반복 워터마크를 설정합니다.", watermark_page)); watermark_layout.addStretch(); tabs.addTab(watermark_page, "워터마크")
