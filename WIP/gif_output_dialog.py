@@ -58,7 +58,7 @@ class _MaskPreview(QWidget):
 class GifOutputDialog(QDialog):
     image_only_requested = Signal(object)
     def __init__(self, default_filename: str, default_export_root: Path, parent: QWidget | None = None) -> None:
-        super().__init__(parent); self.setWindowTitle("GIF 출력 설정"); self._root = default_export_root; self._preferences = QSettings("ImageDiary", "ImageDiary"); self._build(default_filename); self._load_preferences(); self._update()
+        super().__init__(parent); self.setWindowTitle("GIF 저장 설정"); self._root = default_export_root; self._preferences = QSettings("ImageDiary", "ImageDiary"); self._build(default_filename); self._load_preferences(); self._update()
 
     def _build(self, filename: str) -> None:
         layout = QVBoxLayout(self); tabs = QTabWidget(self); layout.addWidget(tabs)
@@ -116,7 +116,7 @@ class GifOutputDialog(QDialog):
 
     def _accept(self) -> None:
         try: options = self.options()
-        except ValueError as error: QMessageBox.warning(self, "GIF 출력 설정", str(error)); return
+        except ValueError as error: QMessageBox.warning(self, "GIF 저장 설정", str(error)); return
         if self._remember.isChecked():
             for key, value in self._remembered_values().items(): self._preferences.setValue(f"gif_output/{key}", value)
             self._preferences.sync()

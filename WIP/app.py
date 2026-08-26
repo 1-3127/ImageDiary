@@ -72,7 +72,7 @@ class MainWindow(QMainWindow):
 
         buttons = QHBoxLayout()
         self._start_button = QPushButton("시작", root)
-        self._finish_button = QPushButton("종료 및 GIF 생성", root)
+        self._finish_button = QPushButton("종료 및 저장", root)
         buttons.addWidget(self._start_button)
         buttons.addWidget(self._finish_button)
 
@@ -106,7 +106,7 @@ class MainWindow(QMainWindow):
         if default_filename is None:
             QMessageBox.warning(
                 self,
-                "GIF 생성",
+                "GIF 저장 설정",
                 "캡처 이미지가 없어 GIF를 생성할 수 없습니다.",
             )
             return
@@ -139,7 +139,13 @@ class MainWindow(QMainWindow):
         dialog.exec()
 
     def _show_help(self) -> None:
-        QMessageBox.information(self, "도움말", "시작을 누르면 즉시 화면을 캡처하고, 이후 시스템 시각 경계마다 저장합니다.\n\n종료 및 저장에서 GIF 또는 원본 이미지를 저장할 수 있습니다.\n\n내부 원본은 최근 2개 세션을 제외하고 생성 날짜로부터 7일이 지나면 자동 정리됩니다.")
+        QMessageBox.information(
+            self,
+            "도움말",
+            "시작을 누르면 즉시 화면을 캡처하고, 이후 시스템 시각 경계마다 저장합니다.\n\n"
+            "종료 및 저장을 누르면 GIF 저장 설정이 열립니다. 저장 설정에서 GIF·원본 이미지 저장 위치를 정하고, 블러/마스킹·워터마크·타임코드 탭에서 공유용 GIF 후처리를 설정할 수 있습니다. 원본 이미지 저장을 켜면 GIF없이 이미지만 저장할 수도 있습니다.\n\n"
+            "내부 원본은 최근 2개 세션을 제외하고 생성 날짜로부터 7일이 지나면 자동 정리됩니다.",
+        )
 
     def _reset_settings(self, dialog: SettingsDialog) -> None:
         confirmation = QMessageBox(self)
