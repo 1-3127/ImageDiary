@@ -49,7 +49,7 @@ class _MaskPreview(QWidget):
     def __init__(self, parent: QWidget) -> None:
         super().__init__(parent); self.top = False; self.bottom = False; self.setFixedHeight(90)
     def paintEvent(self, _event: object) -> None:
-        painter = QPainter(self); painter.fillRect(self.rect(), QColor("#272b33")); painter.fillRect(5, 5, self.width()-10, self.height()-10, QColor("#6686a4")); painter.fillRect(5, 5, self.width()-10, 12, QColor("#d7dde6")); painter.fillRect(5, self.height()-17, self.width()-10, 12, QColor("#30343b"))
+        painter = QPainter(self); painter.fillRect(self.rect(), QColor("#272b33")); painter.fillRect(5, 5, self.width()-10, self.height()-10, QColor("#6686a4")); painter.fillRect(5, 5, self.width()-10, 12, QColor("#d7dde6")); painter.fillRect(5, self.height()-17, self.width()-10, 12, QColor("#1976d2"))
         if self.top: painter.fillRect(5, 5, self.width()-10, 18, QColor("black"))
         if self.bottom: painter.fillRect(5, self.height()-23, self.width()-10, 18, QColor("black"))
         painter.end()
@@ -69,12 +69,12 @@ class GifOutputDialog(QDialog):
         form.addRow("GIF 이름", self._filename); form.addRow("GIF 저장 경로", gif_widget); form.addRow(self._export_images); form.addRow("이미지 저장 경로", image_widget); form.addRow(self._same_path); storage_layout.addWidget(group); storage_layout.addWidget(QLabel("GIF와 원본 이미지의 외부 저장 위치를 정합니다.", storage_page)); storage_layout.addStretch(); tabs.addTab(storage_page, "저장 설정")
         self._image_path_widget = image_widget
 
-        mask_page = QWidget(tabs); mask_layout = QVBoxLayout(mask_page); group = QGroupBox("블러 및 가리기", mask_page); form = QFormLayout(group)
+        mask_page = QWidget(tabs); mask_layout = QVBoxLayout(mask_page); group = QGroupBox("블러 및 마스킹", mask_page); form = QFormLayout(group)
         self._blur = QCheckBox("전체 화면 블러", group); self._blur_strength = self._slider(group, "약", "중", "강")
         self._blur_preview = _BlurPreview(group)
-        self._hide_top = QCheckBox("상단 가리기 (50px)", group); self._hide_bottom = QCheckBox("하단 가리기 (50px)", group); self._mask_preview = _MaskPreview(group)
-        form.addRow(self._blur); form.addRow("블러 강도", self._blur_strength); form.addRow("블러 미리보기", self._blur_preview); form.addRow(self._hide_top); form.addRow(self._hide_bottom); form.addRow("가리기 미리보기", self._mask_preview)
-        mask_layout.addWidget(group); mask_layout.addWidget(QLabel("전체 블러와 상·하단 50px 가리기를 적용합니다.", mask_page)); mask_layout.addStretch(); tabs.addTab(mask_page, "블러/가리기")
+        self._hide_top = QCheckBox("상단 마스킹 (50px)", group); self._hide_bottom = QCheckBox("하단 마스킹 (50px)", group); self._mask_preview = _MaskPreview(group)
+        form.addRow(self._blur); form.addRow("블러 강도", self._blur_strength); form.addRow("블러 미리보기", self._blur_preview); form.addRow(self._hide_top); form.addRow(self._hide_bottom); form.addRow("마스킹 미리보기", self._mask_preview)
+        mask_layout.addWidget(group); mask_layout.addWidget(QLabel("전체 블러와 상·하단 50px 마스킹을 적용합니다.", mask_page)); mask_layout.addStretch(); tabs.addTab(mask_page, "블러/마스킹")
         watermark_page = QWidget(tabs); watermark_layout = QVBoxLayout(watermark_page); group = QGroupBox("워터마크", watermark_page); form = QFormLayout(group)
         self._watermark = QCheckBox("반복 워터마크", group); self._watermark_text = QLineEdit("ImageDiary", group); self._watermark_opacity = self._slider(group, "약", "중", "강"); self._watermark_size = self._slider(group, "작게", "중간", "크게"); self._watermark_preview = _Preview(True, group)
         form.addRow(self._watermark); form.addRow("워터마크 문구", self._watermark_text); form.addRow("워터마크 선명도", self._watermark_opacity); form.addRow("워터마크 크기", self._watermark_size); form.addRow("워터마크 미리보기", self._watermark_preview); watermark_layout.addWidget(group); watermark_layout.addWidget(QLabel("반시계 45° 반복 워터마크를 설정합니다.", watermark_page)); watermark_layout.addStretch(); tabs.addTab(watermark_page, "워터마크")
@@ -82,7 +82,7 @@ class GifOutputDialog(QDialog):
         self._timecode = QCheckBox("타임코드 표시", group); self._date = QCheckBox("날짜(MM/DD) 함께 표시", group); self._date.setChecked(True); self._timecode_background = self._slider(group, "약", "중", "강"); self._timecode_horizontal = QComboBox(group); self._timecode_horizontal.addItem("좌측", "left"); self._timecode_horizontal.addItem("우측", "right"); self._timecode_vertical = QComboBox(group)
         for label, value in (("상단", "top"), ("상중", "upper_middle"), ("중", "middle"), ("중하", "lower_middle"), ("하단", "bottom")): self._timecode_vertical.addItem(label, value)
         self._timecode_vertical.setCurrentIndex(1); self._timecode_preview = _Preview(False, group)
-        form.addRow(self._timecode); form.addRow(self._date); form.addRow("타임코드 배경 선명도", self._timecode_background); form.addRow("타임코드 가로 위치", self._timecode_horizontal); form.addRow("타임코드 세로 위치", self._timecode_vertical); form.addRow("타임코드 미리보기", self._timecode_preview); timecode_layout.addWidget(group); timecode_layout.addWidget(QLabel("각 프레임의 캡처 시각 표시 위치와 배경을 설정합니다.", timecode_page)); timecode_layout.addStretch(); tabs.addTab(timecode_page, "타임코드")
+        form.addRow(self._timecode); form.addRow(self._date); form.addRow("타임코드 배경 선명도", self._timecode_background); form.addRow("타임코드 가로 위치", self._timecode_horizontal); form.addRow("타임코드 세로 위치", self._timecode_vertical); form.addRow("타임코드 미리보기", self._timecode_preview); timecode_layout.addWidget(group); timecode_layout.addWidget(QLabel("각 이미지의 캡처 시각 표시 위치와 배경을 설정합니다.", timecode_page)); timecode_layout.addStretch(); tabs.addTab(timecode_page, "타임코드")
         self._remember = QCheckBox("설정 기억하기", self); layout.addWidget(self._remember)
         note = QLabel("후처리는 GIF에만 적용됩니다.", self); note.setWordWrap(True); layout.addWidget(note)
         buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Cancel | QDialogButtonBox.StandardButton.Ok, Qt.Orientation.Horizontal, self); buttons.button(QDialogButtonBox.StandardButton.Ok).setText("GIF 생성"); buttons.accepted.connect(self._accept); buttons.rejected.connect(self.reject); layout.addWidget(buttons)
@@ -93,7 +93,7 @@ class GifOutputDialog(QDialog):
         line = QLineEdit(str(self._root), parent); button = QPushButton("찾아보기", parent); button.clicked.connect(lambda: self._browse(line)); row = QHBoxLayout(); row.setContentsMargins(0, 0, 0, 0); row.addWidget(line); row.addWidget(button); box = QWidget(parent); box.setLayout(row); return line, box
 
     def _slider(self, parent: QWidget, left: str, middle: str, right: str) -> QWidget:
-        slider = QSlider(Qt.Orientation.Horizontal, parent); slider.setRange(1, 3); slider.setValue(2); labels = QHBoxLayout(); labels.addWidget(QLabel(left)); labels.addStretch(); labels.addWidget(QLabel(middle)); labels.addStretch(); labels.addWidget(QLabel(right)); box = QWidget(parent); layout = QVBoxLayout(box); layout.setContentsMargins(0, 0, 0, 0); layout.addWidget(slider); layout.addLayout(labels); box.slider = slider  # type: ignore[attr-defined]
+        slider = QSlider(Qt.Orientation.Horizontal, parent); slider.setRange(1, 3); slider.setSingleStep(1); slider.setPageStep(1); slider.setValue(2); labels = QHBoxLayout(); labels.addWidget(QLabel(left)); labels.addStretch(); labels.addWidget(QLabel(middle)); labels.addStretch(); labels.addWidget(QLabel(right)); box = QWidget(parent); layout = QVBoxLayout(box); layout.setContentsMargins(0, 0, 0, 0); layout.addWidget(slider); layout.addLayout(labels); box.slider = slider  # type: ignore[attr-defined]
         return box
 
     @staticmethod

@@ -222,7 +222,7 @@ class SessionController(QObject):
                             image_root,
                             self._session_directory.name,
                         )
-            self.status_changed.emit(f"완료: {frame_count}프레임")
+            self.status_changed.emit(f"완료: 이미지 {frame_count}장")
         except ValueError:
             self.status_changed.emit("캡처 이미지가 없어 GIF를 생성하지 않았습니다")
         except (OSError, RuntimeError, FileExportError) as error:

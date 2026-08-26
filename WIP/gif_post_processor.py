@@ -1,4 +1,4 @@
-"""GIF 프레임에만 적용하는 공유용 후처리."""
+"""GIF 이미지에만 적용하는 공유용 후처리."""
 
 from __future__ import annotations
 
