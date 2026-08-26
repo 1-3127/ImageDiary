@@ -27,7 +27,7 @@ class GifPostProcessor:
         return processed
 
     def _apply_blur(self, frame: Image.Image) -> Image.Image:
-        radius = {1: 6, 2: 14, 3: 24}[self._options.blur_strength]
+        radius = {1: 2, 2: 16, 3: 40}[self._options.blur_strength]
         blurred = frame.filter(ImageFilter.GaussianBlur(radius=radius))
         frame.close()
         return blurred
@@ -46,7 +46,7 @@ class GifPostProcessor:
     def _apply_watermark(self, frame: Image.Image) -> None:
         text = self._options.watermark_text.strip()
         font_size = {1: 16, 2: 26, 3: 40}[self._options.watermark_size]
-        opacity = {1: 64, 2: 112, 3: 168}[self._options.watermark_opacity_level]
+        opacity = {1: 35, 2: 125, 3: 230}[self._options.watermark_opacity_level]
         font = ImageFont.load_default(size=font_size)
         bounds = ImageDraw.Draw(Image.new("RGBA", (1, 1))).textbbox(
             (0, 0), text, font=font
@@ -77,13 +77,13 @@ class GifPostProcessor:
             else timestamp.strftime("%H:%M")
         )
         draw = ImageDraw.Draw(frame, "RGBA")
-        font = ImageFont.load_default(size=28)
+        font = ImageFont.load_default(size=56)
         left, top, right, bottom = draw.textbbox((0, 0), text, font=font)
         padding = 8
         x = 10 if self._options.timecode_horizontal == "left" else frame.width - (right - left) - 10
         vertical_ratios = {"top": 0, "upper_middle": 0.25, "middle": 0.5, "lower_middle": 0.75, "bottom": 1}
         y = int((frame.height - (bottom - top)) * vertical_ratios[self._options.timecode_vertical])
-        background_alpha = {1: 80, 2: 150, 3: 220}[self._options.timecode_background_level]
+        background_alpha = {1: 35, 2: 145, 3: 245}[self._options.timecode_background_level]
         draw.rectangle(
             (x - padding, y - padding, x + (right - left) + padding, y + (bottom - top) + padding),
             fill=(0, 0, 0, background_alpha),

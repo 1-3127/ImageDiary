@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import QSettings, Qt
 from PySide6.QtGui import QColor, QFont, QPainter
 from PySide6.QtWidgets import (QCheckBox, QComboBox, QDialog, QDialogButtonBox, QFileDialog,
     QFormLayout, QGroupBox, QHBoxLayout, QLabel, QLineEdit, QMessageBox,
@@ -19,15 +19,15 @@ class _Preview(QWidget):
     def paintEvent(self, _event: object) -> None:
         painter = QPainter(self); painter.fillRect(self.rect(), QColor("#4a4a4a"))
         if self.watermark:
-            painter.setPen(QColor(255, 255, 255, {1: 64, 2: 112, 3: 168}[self.opacity]))
+            painter.setPen(QColor(255, 255, 255, {1: 35, 2: 125, 3: 230}[self.opacity]))
             font = QFont(); font.setPixelSize({1: 14, 2: 22, 3: 34}[self.size]); painter.setFont(font)
             painter.translate(self.width() // 2, self.height() // 2); painter.rotate(-45)
             rect = painter.fontMetrics().boundingRect(self.text or "ImageDiary")
             painter.drawText(-rect.width() // 2, rect.height() // 2, self.text or "ImageDiary")
         else:
-            text = "08/26 19:15" if self.date else "19:15"; font = QFont(); font.setPixelSize(24); painter.setFont(font)
+            text = "08/26 19:15" if self.date else "19:15"; font = QFont(); font.setPixelSize(48); painter.setFont(font)
             rect = painter.fontMetrics().boundingRect(text); x = 10 if self.horizontal == "left" else self.width() - rect.width() - 10; ratios = {"top": 0, "upper_middle": .25, "middle": .5, "lower_middle": .75, "bottom": 1}; y, padding = int((self.height() - rect.height()) * ratios[self.vertical]), 8
-            painter.fillRect(x-padding, y-padding, rect.width()+padding*2, rect.height()+padding*2, QColor(0, 0, 0, {1: 80, 2: 150, 3: 220}[self.background])); painter.setPen(QColor("white")); painter.drawText(x, y+rect.height(), text)
+            painter.fillRect(x-padding, y-padding, rect.width()+padding*2, rect.height()+padding*2, QColor(0, 0, 0, {1: 35, 2: 145, 3: 245}[self.background])); painter.setPen(QColor("white")); painter.drawText(x, y+rect.height(), text)
         painter.end()
 
 
@@ -38,7 +38,7 @@ class _BlurPreview(QWidget):
     def paintEvent(self, _event: object) -> None:
         painter = QPainter(self); painter.fillRect(self.rect(), QColor("#4a4a4a"))
         font = QFont(); font.setPixelSize(26); painter.setFont(font)
-        opacity, radius = {1: (65, 1), 2: (40, 3), 3: (25, 6)}[self.strength]
+        opacity, radius = {1: (90, 0), 2: (40, 4), 3: (18, 10)}[self.strength]
         painter.setPen(QColor(255, 255, 255, opacity))
         for x in range(-radius, radius + 1):
             for y in range(-radius, radius + 1): painter.drawText(18 + x, 48 + y, "ImageDiary")
@@ -47,7 +47,7 @@ class _BlurPreview(QWidget):
 
 class GifOutputDialog(QDialog):
     def __init__(self, default_filename: str, default_export_root: Path, parent: QWidget | None = None) -> None:
-        super().__init__(parent); self.setWindowTitle("GIF 출력 설정"); self._root = default_export_root; self._build(default_filename); self._update()
+        super().__init__(parent); self.setWindowTitle("GIF 출력 설정"); self._root = default_export_root; self._preferences = QSettings("ImageDiary", "ImageDiary"); self._build(default_filename); self._load_preferences(); self._update()
 
     def _build(self, filename: str) -> None:
         layout = QVBoxLayout(self)
@@ -71,6 +71,7 @@ class GifOutputDialog(QDialog):
         form.addRow(self._blur); form.addRow("블러 강도", self._blur_strength); form.addRow("블러 미리보기", self._blur_preview); form.addRow(self._crop); form.addRow("상단 범위", self._top); form.addRow("하단 범위", self._bottom)
         form.addRow(self._watermark); form.addRow("워터마크 문구", self._watermark_text); form.addRow("워터마크 선명도", self._watermark_opacity); form.addRow("워터마크 크기", self._watermark_size); form.addRow("워터마크 미리보기", self._watermark_preview)
         form.addRow(self._timecode); form.addRow(self._date); form.addRow("타임코드 배경 선명도", self._timecode_background); form.addRow("타임코드 가로 위치", self._timecode_horizontal); form.addRow("타임코드 세로 위치", self._timecode_vertical); form.addRow("타임코드 미리보기", self._timecode_preview); layout.addWidget(group)
+        self._remember = QCheckBox("설정 기억하기", self); layout.addWidget(self._remember)
         note = QLabel("후처리는 GIF에만 적용됩니다.", self); note.setWordWrap(True); layout.addWidget(note)
         buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Cancel | QDialogButtonBox.StandardButton.Ok, Qt.Orientation.Horizontal, self); buttons.button(QDialogButtonBox.StandardButton.Ok).setText("GIF 생성"); buttons.accepted.connect(self._accept); buttons.rejected.connect(self.reject); layout.addWidget(buttons)
         self._export_images.toggled.connect(self._update); self._same_path.toggled.connect(self._update); self._blur.toggled.connect(self._update); self._crop.toggled.connect(self._update); self._watermark.toggled.connect(self._update); self._timecode.toggled.connect(self._update)
@@ -100,9 +101,32 @@ class GifOutputDialog(QDialog):
         self._watermark_preview.text = self._watermark_text.text(); self._watermark_preview.size = self._value(self._watermark_size).value(); self._watermark_preview.opacity = self._value(self._watermark_opacity).value(); self._watermark_preview.update(); self._blur_preview.strength = self._value(self._blur_strength).value(); self._blur_preview.update(); self._timecode_preview.date = self._date.isChecked(); self._timecode_preview.background = self._value(self._timecode_background).value(); self._timecode_preview.horizontal = str(self._timecode_horizontal.currentData()); self._timecode_preview.vertical = str(self._timecode_vertical.currentData()); self._timecode_preview.update()
 
     def _accept(self) -> None:
-        try: self.options()
+        try: options = self.options()
         except ValueError as error: QMessageBox.warning(self, "GIF 출력 설정", str(error)); return
+        if self._remember.isChecked():
+            for key, value in self._remembered_values().items(): self._preferences.setValue(f"gif_output/{key}", value)
+            self._preferences.sync()
+        else:
+            self._preferences.setValue("gif_output/remember", False)
+            self._preferences.sync()
         self.accept()
+
+    def _load_preferences(self) -> None:
+        if not bool(self._preferences.value("gif_output/remember", False)):
+            return
+        self._remember.setChecked(True)
+        self._blur.setChecked(bool(self._preferences.value("gif_output/blur", False)))
+        self._value(self._blur_strength).setValue(int(self._preferences.value("gif_output/blur_strength", 2)))
+        self._watermark.setChecked(bool(self._preferences.value("gif_output/watermark", False)))
+        self._watermark_text.setText(str(self._preferences.value("gif_output/watermark_text", "ImageDiary")))
+        self._value(self._watermark_opacity).setValue(int(self._preferences.value("gif_output/watermark_opacity", 2)))
+        self._value(self._watermark_size).setValue(int(self._preferences.value("gif_output/watermark_size", 2)))
+        self._timecode.setChecked(bool(self._preferences.value("gif_output/timecode", False)))
+        self._date.setChecked(bool(self._preferences.value("gif_output/date", True)))
+        self._value(self._timecode_background).setValue(int(self._preferences.value("gif_output/timecode_background", 2)))
+
+    def _remembered_values(self) -> dict[str, object]:
+        return {"remember": True, "blur": self._blur.isChecked(), "blur_strength": self._value(self._blur_strength).value(), "watermark": self._watermark.isChecked(), "watermark_text": self._watermark_text.text(), "watermark_opacity": self._value(self._watermark_opacity).value(), "watermark_size": self._value(self._watermark_size).value(), "timecode": self._timecode.isChecked(), "date": self._date.isChecked(), "timecode_background": self._value(self._timecode_background).value()}
 
     def options(self) -> GifOutputOptions:
         if not self._gif_path.text().strip(): raise ValueError("GIF 저장 경로를 선택하세요.")
