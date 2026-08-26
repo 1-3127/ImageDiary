@@ -18,7 +18,8 @@ class GifPostProcessor:
         processed = frame.convert("RGB")
         if self._options.blur_enabled:
             processed = self._apply_blur(processed)
-        processed = self._crop(processed)
+        if self._options.crop_enabled:
+            self._apply_letterbox(processed)
         if self._options.watermark_enabled and self._options.watermark_text.strip():
             self._apply_watermark(processed)
         if self._options.timecode_enabled:
@@ -31,17 +32,16 @@ class GifPostProcessor:
         frame.close()
         return blurred
 
-    def _crop(self, frame: Image.Image) -> Image.Image:
+    def _apply_letterbox(self, frame: Image.Image) -> None:
         top = self._options.crop_top_px
         bottom = self._options.crop_bottom_px
         if top + bottom >= frame.height:
-            frame.close()
-            raise ValueError("상단과 하단 크롭 합계가 이미지 높이보다 작아야 합니다.")
-        if top == 0 and bottom == 0:
-            return frame
-        cropped = frame.crop((0, top, frame.width, frame.height - bottom))
-        frame.close()
-        return cropped
+            raise ValueError("상단과 하단 마스킹 합계가 이미지 높이보다 작아야 합니다.")
+        draw = ImageDraw.Draw(frame)
+        if top:
+            draw.rectangle((0, 0, frame.width, top), fill="black")
+        if bottom:
+            draw.rectangle((0, frame.height - bottom, frame.width, frame.height), fill="black")
 
     def _apply_watermark(self, frame: Image.Image) -> None:
         text = self._options.watermark_text.strip()

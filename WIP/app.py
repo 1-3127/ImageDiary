@@ -97,7 +97,7 @@ class MainWindow(QMainWindow):
         self._controller.start()
 
     def _finish(self) -> None:
-        default_filename = self._controller.default_gif_filename()
+        default_filename = self._controller.begin_finish()
         if default_filename is None:
             QMessageBox.warning(
                 self,
@@ -112,6 +112,8 @@ class MainWindow(QMainWindow):
         )
         if dialog.exec():
             self._controller.finish(dialog.options())
+        else:
+            self._controller.cancel_finish()
 
     def _apply_state(self, state: SessionState) -> None:
         is_idle = state is SessionState.IDLE

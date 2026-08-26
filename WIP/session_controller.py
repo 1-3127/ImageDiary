@@ -138,6 +138,19 @@ class SessionController(QObject):
             image_paths[-1],
         ).name
 
+    def begin_finish(self) -> str | None:
+        """출력 옵션을 고르는 동안 추가 캡처를 멈춘다."""
+        if self._state is not SessionState.RECORDING:
+            return None
+        if self._scheduler is not None:
+            self._scheduler.stop()
+        return self.default_gif_filename()
+
+    def cancel_finish(self) -> None:
+        """출력 설정 취소 시 현재 기록 세션의 캡처를 다시 시작한다."""
+        if self._state is SessionState.RECORDING and self._scheduler is not None:
+            self._scheduler.start()
+
     def finish(self, output_options: GifOutputOptions | None = None) -> None:
         if self._state is not SessionState.RECORDING:
             return

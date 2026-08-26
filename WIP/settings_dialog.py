@@ -44,9 +44,6 @@ class SettingsDialog(QDialog):
         layout = QVBoxLayout(self)
         form = QFormLayout()
 
-        self._export_path = QLineEdit(str(self._settings.export_root), self)
-        form.addRow("저장 경로:", self._path_row(self._export_path, "작업 일기"))
-
         interval_widget = QWidget(self)
         interval_layout = QHBoxLayout(interval_widget)
         interval_layout.setContentsMargins(0, 0, 0, 0)
@@ -139,13 +136,8 @@ class SettingsDialog(QDialog):
             line_edit.setText(selected)
 
     def _save(self) -> None:
-        export_path = self._export_path.text().strip()
-        if not export_path:
-            return
-
         updated = replace(
             self._settings,
-            export_root=Path(export_path),
             capture_interval_seconds=self._interval.value() * 60,
             capture_target=str(self._capture_target.currentData()),
             capture_format=self._format.currentText(),

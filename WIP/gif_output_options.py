@@ -17,6 +17,7 @@ class GifOutputOptions:
     image_export_root: Path | None = None
     blur_enabled: bool = False
     blur_strength: int = 2
+    crop_enabled: bool = False
     crop_top_px: int = 0
     crop_bottom_px: int = 0
     watermark_enabled: bool = False

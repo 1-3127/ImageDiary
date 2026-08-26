@@ -21,12 +21,25 @@ class _Preview(QWidget):
         if self.watermark:
             painter.setPen(QColor(255, 255, 255, {1: 64, 2: 112, 3: 168}[self.opacity]))
             font = QFont(); font.setPixelSize({1: 14, 2: 22, 3: 34}[self.size]); painter.setFont(font)
-            painter.translate(self.width() // 2, self.height() // 2); painter.rotate(-45); painter.drawText(0, 0, self.text or "ImageDiary")
+            painter.translate(self.width() // 2, self.height() // 2); painter.rotate(-45)
+            rect = painter.fontMetrics().boundingRect(self.text or "ImageDiary")
+            painter.drawText(-rect.width() // 2, rect.height() // 2, self.text or "ImageDiary")
         else:
             text = "08/26 19:15" if self.date else "19:15"; font = QFont(); font.setPixelSize(16); painter.setFont(font)
             rect = painter.fontMetrics().boundingRect(text); x, y, padding = 10, self.height() // 4, 8
             painter.fillRect(x-padding, y-padding, rect.width()+padding*2, rect.height()+padding*2, QColor(0, 0, 0, 150)); painter.setPen(QColor("white")); painter.drawText(x, y+rect.height(), text)
         painter.end()
+
+
+class _BlurPreview(QWidget):
+    def __init__(self, parent: QWidget) -> None:
+        super().__init__(parent); self.strength = 2; self.setFixedHeight(80)
+
+    def paintEvent(self, _event: object) -> None:
+        painter = QPainter(self); painter.fillRect(self.rect(), QColor("#365779"))
+        for x, color in ((15, "#f6c445"), (70, "#e87878"), (145, "#72c78c")):
+            painter.setBrush(QColor(color)); painter.setPen(Qt.PenStyle.NoPen); painter.drawEllipse(x, 18, 45, 45)
+        painter.fillRect(self.rect(), QColor(220, 220, 220, {1: 80, 2: 140, 3: 195}[self.strength])); painter.end()
 
 
 class GifOutputDialog(QDialog):
@@ -41,19 +54,21 @@ class GifOutputDialog(QDialog):
         form.addRow("GIF 이름", self._filename); form.addRow("GIF 저장 경로", gif_widget); form.addRow("이미지 저장 경로", image_widget); form.addRow(self._same_path); layout.addWidget(group)
         self._image_path_widget = image_widget
 
-        group = QGroupBox("공유용 GIF 처리", self); form = QFormLayout(group)
+        group = QGroupBox("GIF 후처리", self); form = QFormLayout(group)
         self._blur = QCheckBox("전체 화면 블러", group); self._blur_strength = self._slider(group, "약", "중", "강")
+        self._blur_preview = _BlurPreview(group)
         self._top = QSpinBox(group); self._bottom = QSpinBox(group)
         for control in (self._top, self._bottom): control.setRange(0, 10000); control.setSuffix(" px")
+        self._crop = QCheckBox("상·하단 검정 마스킹", group)
         self._watermark = QCheckBox("반복 워터마크", group); self._watermark_text = QLineEdit("ImageDiary", group); self._watermark_opacity = self._slider(group, "약", "중", "강"); self._watermark_size = self._slider(group, "작게", "중간", "크게"); self._watermark_preview = _Preview(True, group)
         self._timecode = QCheckBox("타임코드 표시", group); self._date = QCheckBox("날짜(MM/DD) 함께 표시", group); self._date.setChecked(True); self._timecode_preview = _Preview(False, group)
-        form.addRow(self._blur); form.addRow("블러 강도", self._blur_strength); form.addRow("상단 크롭", self._top); form.addRow("하단 크롭", self._bottom)
-        form.addRow(self._watermark); form.addRow("워터마크 문구", self._watermark_text); form.addRow("워터마크 투명도", self._watermark_opacity); form.addRow("워터마크 크기", self._watermark_size); form.addRow("워터마크 미리보기", self._watermark_preview)
+        form.addRow(self._blur); form.addRow("블러 강도", self._blur_strength); form.addRow("블러 미리보기", self._blur_preview); form.addRow(self._crop); form.addRow("상단 마스킹", self._top); form.addRow("하단 마스킹", self._bottom)
+        form.addRow(self._watermark); form.addRow("워터마크 문구", self._watermark_text); form.addRow("워터마크 선명도", self._watermark_opacity); form.addRow("워터마크 크기", self._watermark_size); form.addRow("워터마크 미리보기", self._watermark_preview)
         form.addRow(self._timecode); form.addRow(self._date); form.addRow("타임코드 미리보기", self._timecode_preview); layout.addWidget(group)
-        note = QLabel("후처리는 생성되는 GIF에만 적용되며 내부 원본 Screenshot은 변경하지 않습니다.", self); note.setWordWrap(True); layout.addWidget(note)
+        note = QLabel("후처리는 GIF에만 적용됩니다.", self); note.setWordWrap(True); layout.addWidget(note)
         buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Cancel | QDialogButtonBox.StandardButton.Ok, Qt.Orientation.Horizontal, self); buttons.button(QDialogButtonBox.StandardButton.Ok).setText("GIF 생성"); buttons.accepted.connect(self._accept); buttons.rejected.connect(self.reject); layout.addWidget(buttons)
-        self._same_path.toggled.connect(self._update); self._blur.toggled.connect(self._update); self._watermark.toggled.connect(self._update); self._timecode.toggled.connect(self._update)
-        self._watermark_text.textChanged.connect(self._refresh_previews); self._value(self._watermark_size).valueChanged.connect(self._refresh_previews); self._value(self._watermark_opacity).valueChanged.connect(self._refresh_previews); self._date.toggled.connect(self._refresh_previews); self._refresh_previews()
+        self._same_path.toggled.connect(self._update); self._blur.toggled.connect(self._update); self._crop.toggled.connect(self._update); self._watermark.toggled.connect(self._update); self._timecode.toggled.connect(self._update)
+        self._watermark_text.textChanged.connect(self._refresh_previews); self._value(self._watermark_size).valueChanged.connect(self._refresh_previews); self._value(self._watermark_opacity).valueChanged.connect(self._refresh_previews); self._value(self._blur_strength).valueChanged.connect(self._refresh_previews); self._date.toggled.connect(self._refresh_previews); self._refresh_previews()
 
     def _path_widget(self, parent: QWidget) -> tuple[QLineEdit, QWidget]:
         line = QLineEdit(str(self._root), parent); button = QPushButton("찾아보기", parent); button.clicked.connect(lambda: self._browse(line)); row = QHBoxLayout(); row.setContentsMargins(0, 0, 0, 0); row.addWidget(line); row.addWidget(button); box = QWidget(parent); box.setLayout(row); return line, box
@@ -70,13 +85,13 @@ class GifOutputDialog(QDialog):
         if selected: line.setText(selected)
 
     def _update(self) -> None:
-        self._image_path_widget.setEnabled(not self._same_path.isChecked()); self._blur_strength.setEnabled(self._blur.isChecked())
+        self._image_path_widget.setEnabled(not self._same_path.isChecked()); self._blur_strength.setEnabled(self._blur.isChecked()); self._blur_preview.setEnabled(self._blur.isChecked()); self._top.setEnabled(self._crop.isChecked()); self._bottom.setEnabled(self._crop.isChecked())
         enabled = self._watermark.isChecked()
         for widget in (self._watermark_text, self._watermark_opacity, self._watermark_size, self._watermark_preview): widget.setEnabled(enabled)
         self._date.setEnabled(self._timecode.isChecked()); self._timecode_preview.setEnabled(self._timecode.isChecked())
 
     def _refresh_previews(self) -> None:
-        self._watermark_preview.text = self._watermark_text.text(); self._watermark_preview.size = self._value(self._watermark_size).value(); self._watermark_preview.opacity = self._value(self._watermark_opacity).value(); self._watermark_preview.update(); self._timecode_preview.date = self._date.isChecked(); self._timecode_preview.update()
+        self._watermark_preview.text = self._watermark_text.text(); self._watermark_preview.size = self._value(self._watermark_size).value(); self._watermark_preview.opacity = self._value(self._watermark_opacity).value(); self._watermark_preview.update(); self._blur_preview.strength = self._value(self._blur_strength).value(); self._blur_preview.update(); self._timecode_preview.date = self._date.isChecked(); self._timecode_preview.update()
 
     def _accept(self) -> None:
         try: self.options()
@@ -89,4 +104,4 @@ class GifOutputDialog(QDialog):
         if not self._same_path.isChecked() and not image_text:
             raise ValueError("이미지 저장 경로를 선택하세요.")
         image_root = None if self._same_path.isChecked() else Path(image_text)
-        return GifOutputOptions(filename=self._filename.text().strip(), gif_export_root=Path(self._gif_path.text().strip()), images_with_gif=self._same_path.isChecked(), image_export_root=image_root, blur_enabled=self._blur.isChecked(), blur_strength=self._value(self._blur_strength).value(), crop_top_px=self._top.value(), crop_bottom_px=self._bottom.value(), watermark_enabled=self._watermark.isChecked(), watermark_text=self._watermark_text.text(), watermark_opacity_level=self._value(self._watermark_opacity).value(), watermark_size=self._value(self._watermark_size).value(), timecode_enabled=self._timecode.isChecked(), timecode_show_date=self._date.isChecked())
+        return GifOutputOptions(filename=self._filename.text().strip(), gif_export_root=Path(self._gif_path.text().strip()), images_with_gif=self._same_path.isChecked(), image_export_root=image_root, blur_enabled=self._blur.isChecked(), blur_strength=self._value(self._blur_strength).value(), crop_enabled=self._crop.isChecked(), crop_top_px=self._top.value(), crop_bottom_px=self._bottom.value(), watermark_enabled=self._watermark.isChecked(), watermark_text=self._watermark_text.text(), watermark_opacity_level=self._value(self._watermark_opacity).value(), watermark_size=self._value(self._watermark_size).value(), timecode_enabled=self._timecode.isChecked(), timecode_show_date=self._date.isChecked())

@@ -9,7 +9,7 @@ from gif_post_processor import GifPostProcessor
 
 
 class GifPostProcessorTests(TestCase):
-    def test_crop_creates_processed_frame_without_mutating_source(self) -> None:
+    def test_masking_preserves_frame_size_without_mutating_source(self) -> None:
         with TemporaryDirectory() as temporary_directory:
             source_path = Path(temporary_directory) / "001.png"
             source = Image.new("RGB", (20, 20), "red")
@@ -19,6 +19,7 @@ class GifPostProcessorTests(TestCase):
             processor = GifPostProcessor(
                 GifOutputOptions(
                     filename="Diary_test.gif",
+                    crop_enabled=True,
                     crop_top_px=3,
                     crop_bottom_px=4,
                 )
@@ -26,7 +27,8 @@ class GifPostProcessorTests(TestCase):
 
             processed = processor.process(original, source_path)
 
-            self.assertEqual(processed.size, (20, 13))
+            self.assertEqual(processed.size, (20, 20))
+            self.assertEqual(processed.getpixel((10, 1)), (0, 0, 0))
             with Image.open(source_path) as unchanged:
                 self.assertEqual(unchanged.size, (20, 20))
             processed.close()
@@ -41,11 +43,12 @@ class GifPostProcessorTests(TestCase):
                 processor = GifPostProcessor(
                     GifOutputOptions(
                         filename="Diary_test.gif",
+                        crop_enabled=True,
                         crop_top_px=5,
                         crop_bottom_px=5,
                     )
                 )
-                with self.assertRaisesRegex(ValueError, "크롭"):
+                with self.assertRaises(ValueError):
                     processor.process(original, source_path)
 
     def test_applies_full_frame_blur(self) -> None:

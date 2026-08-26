@@ -69,7 +69,6 @@ class MainWindowTests(TestCase):
     def test_settings_dialog_has_unified_path_and_interval(self) -> None:
         dialog = SettingsDialog(default_settings())
 
-        self.assertEqual(dialog._export_path.text(), str(default_settings().export_root))
         self.assertEqual(dialog._interval.minimum(), 5)
         self.assertEqual(dialog._interval.maximum(), 30)
         self.assertEqual(dialog._interval.singleStep(), 5)
