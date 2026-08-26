@@ -47,4 +47,3 @@ class GifPostProcessorTests(TestCase):
                 )
                 with self.assertRaisesRegex(ValueError, "크롭"):
                     processor.process(original, source_path)
-

@@ -79,4 +79,3 @@ class GifPostProcessor:
             fill=(0, 0, 0, 150),
         )
         draw.text((x, y), text, fill=(255, 255, 255, 255))
-

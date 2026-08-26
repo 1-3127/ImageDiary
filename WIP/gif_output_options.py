@@ -40,4 +40,3 @@ class GifOutputOptions:
             if len(region) != 4 or region[2] <= 0 or region[3] <= 0:
                 raise ValueError("블러 영역은 x, y, 너비, 높이 형식이어야 합니다.")
         object.__setattr__(self, "filename", filename)
-
