@@ -25,6 +25,14 @@ def session_last_modified_ns(session_directory: Path) -> int:
     return latest
 
 
+def session_created_timestamp(session_directory: Path) -> float:
+    """세션 폴더명에 기록한 생성 날짜를 자동 정리 기준으로 사용한다."""
+    match = SESSION_DIRECTORY_PATTERN.fullmatch(session_directory.name)
+    if match is None:
+        return session_directory.stat().st_ctime
+    return datetime.strptime(match.group("date"), "%y%m%d").timestamp()
+
+
 def cleanup_expired_sessions(
     internal_root: Path,
     retention_days: int,
@@ -56,7 +64,7 @@ def cleanup_expired_sessions(
     )
 
     for candidate in sessions[max(0, keep_count):]:
-        if session_last_modified_ns(candidate) / 1_000_000_000 > cutoff_timestamp:
+        if session_created_timestamp(candidate) > cutoff_timestamp:
             continue
 
         candidate_resolved = candidate.resolve()

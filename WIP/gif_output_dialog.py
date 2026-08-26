@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from PySide6.QtCore import QSettings, Qt
+from PySide6.QtCore import QSettings, Qt, Signal
 from PySide6.QtGui import QColor, QFont, QPainter
 from PySide6.QtWidgets import (QCheckBox, QComboBox, QDialog, QDialogButtonBox, QFileDialog,
     QFormLayout, QGroupBox, QHBoxLayout, QLabel, QLineEdit, QMessageBox,
@@ -56,6 +56,7 @@ class _MaskPreview(QWidget):
 
 
 class GifOutputDialog(QDialog):
+    image_only_requested = Signal(object)
     def __init__(self, default_filename: str, default_export_root: Path, parent: QWidget | None = None) -> None:
         super().__init__(parent); self.setWindowTitle("GIF 출력 설정"); self._root = default_export_root; self._preferences = QSettings("ImageDiary", "ImageDiary"); self._build(default_filename); self._load_preferences(); self._update()
 
@@ -83,7 +84,8 @@ class GifOutputDialog(QDialog):
         for label, value in (("상단", "top"), ("상중", "upper_middle"), ("중", "middle"), ("중하", "lower_middle"), ("하단", "bottom")): self._timecode_vertical.addItem(label, value)
         self._timecode_vertical.setCurrentIndex(1); self._timecode_preview = _Preview(False, group)
         form.addRow(self._timecode); form.addRow(self._date); form.addRow("타임코드 배경 선명도", self._timecode_background); form.addRow("타임코드 가로 위치", self._timecode_horizontal); form.addRow("타임코드 세로 위치", self._timecode_vertical); form.addRow("타임코드 미리보기", self._timecode_preview); timecode_layout.addWidget(group); timecode_layout.addWidget(QLabel("각 이미지의 캡처 시각 표시 위치와 배경을 설정합니다.", timecode_page)); timecode_layout.addStretch(); tabs.addTab(timecode_page, "타임코드")
-        self._remember = QCheckBox("설정 기억하기", self); layout.addWidget(self._remember)
+        self._image_only = QPushButton("GIF없이 이미지만 저장", self); self._image_only.setEnabled(False); self._image_only.clicked.connect(self._save_images_only)
+        self._remember = QCheckBox("설정 기억하기", self); layout.addWidget(self._image_only); layout.addWidget(self._remember)
         note = QLabel("후처리는 GIF에만 적용됩니다.", self); note.setWordWrap(True); layout.addWidget(note)
         buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Cancel | QDialogButtonBox.StandardButton.Ok, Qt.Orientation.Horizontal, self); buttons.button(QDialogButtonBox.StandardButton.Ok).setText("GIF 생성"); buttons.accepted.connect(self._accept); buttons.rejected.connect(self.reject); layout.addWidget(buttons)
         self._export_images.toggled.connect(self._update); self._same_path.toggled.connect(self._update); self._blur.toggled.connect(self._update); self._hide_top.toggled.connect(self._refresh_previews); self._hide_bottom.toggled.connect(self._refresh_previews); self._watermark.toggled.connect(self._update); self._timecode.toggled.connect(self._update)
@@ -104,7 +106,7 @@ class GifOutputDialog(QDialog):
         if selected: line.setText(selected)
 
     def _update(self) -> None:
-        save_images = self._export_images.isChecked(); self._same_path.setEnabled(save_images); self._image_path_widget.setEnabled(save_images and not self._same_path.isChecked()); self._blur_strength.setEnabled(self._blur.isChecked()); self._blur_preview.setEnabled(self._blur.isChecked())
+        save_images = self._export_images.isChecked(); self._image_only.setEnabled(save_images); self._same_path.setEnabled(save_images); self._image_path_widget.setEnabled(save_images and not self._same_path.isChecked()); self._blur_strength.setEnabled(self._blur.isChecked()); self._blur_preview.setEnabled(self._blur.isChecked())
         enabled = self._watermark.isChecked()
         for widget in (self._watermark_text, self._watermark_opacity, self._watermark_size, self._watermark_preview): widget.setEnabled(enabled)
         timecode_enabled = self._timecode.isChecked(); self._date.setEnabled(timecode_enabled); self._timecode_background.setEnabled(timecode_enabled); self._timecode_horizontal.setEnabled(timecode_enabled); self._timecode_vertical.setEnabled(timecode_enabled); self._timecode_preview.setEnabled(timecode_enabled)
@@ -123,6 +125,12 @@ class GifOutputDialog(QDialog):
             self._preferences.sync()
         self.accept()
 
+    def _save_images_only(self) -> None:
+        answer = QMessageBox.question(self, "이미지 저장", "정말 GIF없이 이미지만 저장하시겠습니까?")
+        if answer is QMessageBox.StandardButton.Yes:
+            self.image_only_requested.emit(self.options())
+            self.accept()
+
     def _load_preferences(self) -> None:
         if not bool(self._preferences.value("gif_output/remember", False)):
             return
@@ -136,9 +144,15 @@ class GifOutputDialog(QDialog):
         self._timecode.setChecked(bool(self._preferences.value("gif_output/timecode", False)))
         self._date.setChecked(bool(self._preferences.value("gif_output/date", True)))
         self._value(self._timecode_background).setValue(int(self._preferences.value("gif_output/timecode_background", 2)))
+        self._export_images.setChecked(bool(self._preferences.value("gif_output/export_images", False)))
+        self._same_path.setChecked(bool(self._preferences.value("gif_output/same_path", True)))
+        self._hide_top.setChecked(bool(self._preferences.value("gif_output/hide_top", False)))
+        self._hide_bottom.setChecked(bool(self._preferences.value("gif_output/hide_bottom", False)))
+        self._timecode_horizontal.setCurrentIndex(max(0, self._timecode_horizontal.findData(self._preferences.value("gif_output/timecode_horizontal", "left"))))
+        self._timecode_vertical.setCurrentIndex(max(0, self._timecode_vertical.findData(self._preferences.value("gif_output/timecode_vertical", "upper_middle"))))
 
     def _remembered_values(self) -> dict[str, object]:
-        return {"remember": True, "blur": self._blur.isChecked(), "blur_strength": self._value(self._blur_strength).value(), "watermark": self._watermark.isChecked(), "watermark_text": self._watermark_text.text(), "watermark_opacity": self._value(self._watermark_opacity).value(), "watermark_size": self._value(self._watermark_size).value(), "timecode": self._timecode.isChecked(), "date": self._date.isChecked(), "timecode_background": self._value(self._timecode_background).value()}
+        return {"remember": True, "blur": self._blur.isChecked(), "blur_strength": self._value(self._blur_strength).value(), "export_images": self._export_images.isChecked(), "same_path": self._same_path.isChecked(), "hide_top": self._hide_top.isChecked(), "hide_bottom": self._hide_bottom.isChecked(), "watermark": self._watermark.isChecked(), "watermark_text": self._watermark_text.text(), "watermark_opacity": self._value(self._watermark_opacity).value(), "watermark_size": self._value(self._watermark_size).value(), "timecode": self._timecode.isChecked(), "date": self._date.isChecked(), "timecode_background": self._value(self._timecode_background).value(), "timecode_horizontal": self._timecode_horizontal.currentData(), "timecode_vertical": self._timecode_vertical.currentData()}
 
     def options(self) -> GifOutputOptions:
         if not self._gif_path.text().strip(): raise ValueError("GIF 저장 경로를 선택하세요.")

@@ -81,4 +81,4 @@ PyInstaller 빌드 의존성을 설치한 뒤 저장소 root에서 실행합니�
 .\WIP\.venv\Scripts\python.exe -m PyInstaller --clean --noconfirm --distpath .\Release --workpath .\build\pyinstaller .\packaging\ImageDiary.spec
 ```
 
-결과물은 `Release\ImageDiary-v0.2\ImageDiary.exe`에 생성됩니다. 1분 디버그 옵션도 v0.2 패키지에 포함됩니다.
+결과물은 `Release\ImageDiary-v0.3\ImageDiary.exe`에 생성됩니다.

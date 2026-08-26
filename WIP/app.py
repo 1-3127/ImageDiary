@@ -63,8 +63,12 @@ class MainWindow(QMainWindow):
         self._settings_button = QToolButton(root)
         self._settings_button.setText("설정")
         self._settings_button.setToolTip("설정 열기")
+        self._help_button = QToolButton(root)
+        self._help_button.setText("?")
+        self._help_button.setToolTip("도움말")
         toolbar.addWidget(self._pin_button)
         toolbar.addWidget(self._settings_button)
+        toolbar.addWidget(self._help_button)
 
         buttons = QHBoxLayout()
         self._start_button = QPushButton("시작", root)
@@ -82,6 +86,7 @@ class MainWindow(QMainWindow):
         self._finish_button.clicked.connect(self._finish)
         self._pin_button.toggled.connect(self._pin_toggled)
         self._settings_button.clicked.connect(self._open_settings)
+        self._help_button.clicked.connect(self._show_help)
         self._controller.state_changed.connect(self._apply_state)
         self._controller.status_changed.connect(self._session_status.set_status)
         self._controller.capture_count_changed.connect(
@@ -110,6 +115,7 @@ class MainWindow(QMainWindow):
             self._settings.export_root,
             self,
         )
+        dialog.image_only_requested.connect(self._controller.save_images_only)
         if dialog.exec():
             self._controller.finish(dialog.options())
         else:
@@ -131,6 +137,9 @@ class MainWindow(QMainWindow):
         dialog.settings_saved.connect(self._save_settings)
         dialog.reset_requested.connect(lambda: self._reset_settings(dialog))
         dialog.exec()
+
+    def _show_help(self) -> None:
+        QMessageBox.information(self, "도움말", "시작을 누르면 즉시 화면을 캡처하고, 이후 시스템 시각 경계마다 저장합니다.\n\n종료 및 저장에서 GIF 또는 원본 이미지를 저장할 수 있습니다.\n\n내부 원본은 최근 2개 세션을 제외하고 생성 날짜로부터 7일이 지나면 자동 정리됩니다.")
 
     def _reset_settings(self, dialog: SettingsDialog) -> None:
         confirmation = QMessageBox(self)

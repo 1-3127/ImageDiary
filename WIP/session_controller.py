@@ -235,6 +235,25 @@ class SessionController(QObject):
                 )
                 self.output_ready.emit(output_directory)
 
+    def save_images_only(self, output_options: GifOutputOptions) -> None:
+        if self._state is not SessionState.RECORDING:
+            return
+        assert self._screenshots_directory is not None
+        assert self._session_directory is not None
+        assert self._session_settings is not None
+        image_root = (output_options.gif_export_root or self._session_settings.export_root) if output_options.images_with_gif else output_options.image_export_root
+        if image_root is None:
+            return
+        try:
+            for screenshot in self._screenshots_directory.iterdir():
+                if screenshot.is_file(): self._file_exporter.copy_screenshot(screenshot, image_root, self._session_directory.name)
+            self.status_changed.emit("이미지 저장 완료")
+            self.output_ready.emit(image_root / self._session_directory.name)
+        except FileExportError as error:
+            self.status_changed.emit(f"이미지 저장 실패: {error}")
+        finally:
+            self._set_state(SessionState.IDLE)
+
     def _capture_screenshot(self) -> None:
         if self._state is not SessionState.RECORDING:
             return
