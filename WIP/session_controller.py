@@ -140,7 +140,7 @@ class SessionController(QObject):
             self._scheduler.start()
             return
         self.mark_current_session_unfinished()
-        self.status_changed.emit("GIF 저장 설정을 취소했습니다. 미완료 세션으로 보관했습니다.")
+        self.status_changed.emit("대기")
         self._set_state(SessionState.IDLE)
 
     def mark_current_session_unfinished(self) -> None:
@@ -154,7 +154,20 @@ class SessionController(QObject):
         if self._scheduler is not None:
             self._scheduler.stop()
         self.mark_current_session_unfinished()
-        self.status_changed.emit("GIF 없이 종료했습니다. 미완료 세션으로 보관했습니다.")
+        self.status_changed.emit("완료")
+        self._set_state(SessionState.IDLE)
+
+    def complete_with_images_only(self) -> None:
+        """이미지만 내보낸 세션을 내부 더미 GIF로 완료 상태로 확정한다."""
+        assert self._session_directory is not None
+        assert self._screenshots_directory is not None
+        image_paths = sorted_image_paths(self._screenshots_directory)
+        if image_paths:
+            self._storage.gif_output_path(
+                self._session_directory, image_paths[0], image_paths[-1]
+            ).touch(exist_ok=True)
+        clear_unfinished_marker(self._session_directory)
+        self.status_changed.emit("완료")
         self._set_state(SessionState.IDLE)
 
     def retry_finish(self, output_options: GifOutputOptions) -> None:
@@ -241,8 +254,7 @@ class SessionController(QObject):
         if self._state is not SessionState.RECORDING:
             return
         self._export_images(output_options)
-        self.status_changed.emit("이미지 저장 완료")
-        self._set_state(SessionState.IDLE)
+        self.complete_with_images_only()
 
     def _capture_screenshot(self) -> None:
         if self._state is not SessionState.RECORDING:

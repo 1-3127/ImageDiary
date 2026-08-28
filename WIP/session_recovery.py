@@ -61,6 +61,26 @@ def find_marked_incomplete_sessions(internal_root: Path) -> tuple[RecoveryCandid
     return tuple(sorted(candidates, key=lambda item: (session_last_modified_ns(item.session_directory), item.session_directory.name), reverse=True))
 
 
+def find_completed_sessions_with_images(internal_root: Path) -> tuple[RecoveryCandidate, ...]:
+    """GIF를 이미 만든 세션 중 내부 Screenshot 원본이 남아 있는 항목을 반환한다."""
+
+    if not internal_root.is_dir():
+        return ()
+    candidates = []
+    for path in internal_root.iterdir():
+        if not path.is_dir() or path.is_symlink() or not SESSION_DIRECTORY_PATTERN.fullmatch(path.name):
+            continue
+        if not any(path.glob("Diary_*.gif")):
+            continue
+        screenshots = path / "Screenshot"
+        image_paths = tuple(sorted_image_paths(screenshots)) if screenshots.is_dir() else ()
+        if image_paths:
+            candidates.append(
+                RecoveryCandidate(path, screenshots, image_paths, infer_session_start(path, image_paths))
+            )
+    return tuple(sorted(candidates, key=lambda item: (session_last_modified_ns(item.session_directory), item.session_directory.name), reverse=True))
+
+
 def recovery_candidate_from_directory(session_directory: Path) -> RecoveryCandidate | None:
     """GIF가 아직 없는 세션 디렉터리를 복구 후보로 변환한다."""
 

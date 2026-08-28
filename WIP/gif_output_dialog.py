@@ -58,7 +58,7 @@ class _MaskPreview(QWidget):
 class GifOutputDialog(QDialog):
     image_only_requested = Signal(object)
     def __init__(self, default_filename: str, default_export_root: Path, parent: QWidget | None = None) -> None:
-        super().__init__(parent); self.setWindowTitle("GIF 저장 설정"); self._root = default_export_root; self._preferences = QSettings("ImageDiary", "ImageDiary"); self._return_to_session = False; self._build(default_filename); self._load_preferences(); self._update()
+        super().__init__(parent); self.setWindowTitle("내보내기 설정"); self._root = default_export_root; self._preferences = QSettings("ImageDiary", "ImageDiary"); self._return_to_session = False; self._build(default_filename); self._load_preferences(); self._update()
 
     @property
     def return_to_session_requested(self) -> bool:
@@ -67,11 +67,11 @@ class GifOutputDialog(QDialog):
     def _build(self, filename: str) -> None:
         layout = QVBoxLayout(self); tabs = QTabWidget(self); layout.addWidget(tabs)
         storage_page = QWidget(tabs); storage_layout = QVBoxLayout(storage_page)
-        group = QGroupBox("저장 설정", self); form = QFormLayout(group)
+        group = QGroupBox("내보내기", self); form = QFormLayout(group)
         self._filename = QLineEdit(filename, group); self._gif_path, gif_widget = self._path_widget(group); self._image_path, image_widget = self._path_widget(group)
         self._export_images = QCheckBox("원본 이미지 저장", group); self._export_images.setChecked(False)
         self._same_path = QCheckBox("GIF와 같은 경로에 원본 이미지 저장", group); self._same_path.setChecked(True)
-        form.addRow("GIF 이름", self._filename); form.addRow("GIF 저장 경로", gif_widget); form.addRow(self._export_images); form.addRow("이미지 저장 경로", image_widget); form.addRow(self._same_path); storage_layout.addWidget(group); storage_layout.addWidget(QLabel("GIF와 원본 이미지의 외부 저장 위치를 정합니다.", storage_page)); storage_layout.addStretch(); tabs.addTab(storage_page, "저장 설정")
+        form.addRow("GIF 이름", self._filename); form.addRow("GIF 내보내기 경로", gif_widget); form.addRow(self._export_images); form.addRow("이미지 내보내기 경로", image_widget); form.addRow(self._same_path); storage_layout.addWidget(group); storage_layout.addWidget(QLabel("GIF와 원본 이미지의 외부 내보내기 위치를 정합니다.", storage_page)); storage_layout.addStretch(); tabs.addTab(storage_page, "내보내기")
         self._image_path_widget = image_widget
 
         mask_page = QWidget(tabs); mask_layout = QVBoxLayout(mask_page); group = QGroupBox("블러 및 마스킹", mask_page); form = QFormLayout(group)
@@ -88,10 +88,10 @@ class GifOutputDialog(QDialog):
         for label, value in (("상단", "top"), ("상중", "upper_middle"), ("중", "middle"), ("중하", "lower_middle"), ("하단", "bottom")): self._timecode_vertical.addItem(label, value)
         self._timecode_vertical.setCurrentIndex(1); self._timecode_preview = _Preview(False, group)
         form.addRow(self._timecode); form.addRow(self._date); form.addRow("타임코드 배경 선명도", self._timecode_background); form.addRow("타임코드 가로 위치", self._timecode_horizontal); form.addRow("타임코드 세로 위치", self._timecode_vertical); form.addRow("타임코드 미리보기", self._timecode_preview); timecode_layout.addWidget(group); timecode_layout.addWidget(QLabel("각 이미지의 캡처 시각 표시 위치와 배경을 설정합니다.", timecode_page)); timecode_layout.addStretch(); tabs.addTab(timecode_page, "타임코드")
-        self._image_only = QPushButton("GIF없이 이미지만 저장", self); self._image_only.setEnabled(False); self._image_only.clicked.connect(self._save_images_only)
-        self._remember = QCheckBox("설정 기억하기", self); layout.addWidget(self._image_only); layout.addWidget(self._remember)
+        self._image_only = QPushButton("GIF 없이 이미지만 내보내기", storage_page); self._image_only.setEnabled(False); self._image_only.clicked.connect(self._save_images_only); storage_layout.addWidget(self._image_only)
+        self._remember = QCheckBox("설정 기억하기", self); layout.addWidget(self._remember)
         note = QLabel("후처리는 GIF에만 적용됩니다.", self); note.setWordWrap(True); layout.addWidget(note)
-        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Cancel | QDialogButtonBox.StandardButton.Ok, Qt.Orientation.Horizontal, self); buttons.button(QDialogButtonBox.StandardButton.Ok).setText("GIF 생성"); buttons.button(QDialogButtonBox.StandardButton.Cancel).setText("취소"); self._return_button = buttons.addButton("세션으로 돌아가기", QDialogButtonBox.ButtonRole.ActionRole); buttons.accepted.connect(self._accept); buttons.rejected.connect(self.reject); self._return_button.clicked.connect(self._return_to_recording); layout.addWidget(buttons)
+        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Cancel | QDialogButtonBox.StandardButton.Ok, Qt.Orientation.Horizontal, self); buttons.button(QDialogButtonBox.StandardButton.Ok).setText("GIF 생성"); buttons.button(QDialogButtonBox.StandardButton.Cancel).setText("취소"); buttons.accepted.connect(self._accept); buttons.rejected.connect(self.reject); self._return_button = QPushButton("세션으로 돌아가기", self); self._return_button.clicked.connect(self._return_to_recording); button_row = QHBoxLayout(); button_row.addWidget(self._return_button); button_row.addStretch(); button_row.addWidget(buttons); layout.addLayout(button_row)
         self._export_images.toggled.connect(self._update); self._same_path.toggled.connect(self._update); self._blur.toggled.connect(self._update); self._hide_top.toggled.connect(self._refresh_previews); self._hide_bottom.toggled.connect(self._refresh_previews); self._watermark.toggled.connect(self._update); self._timecode.toggled.connect(self._update)
         self._watermark_text.textChanged.connect(self._refresh_previews); self._value(self._watermark_size).valueChanged.connect(self._refresh_previews); self._value(self._watermark_opacity).valueChanged.connect(self._refresh_previews); self._value(self._blur_strength).valueChanged.connect(self._refresh_previews); self._value(self._timecode_background).valueChanged.connect(self._refresh_previews); self._date.toggled.connect(self._refresh_previews); self._timecode_horizontal.currentIndexChanged.connect(self._refresh_previews); self._timecode_vertical.currentIndexChanged.connect(self._refresh_previews); self._refresh_previews()
 
@@ -120,7 +120,7 @@ class GifOutputDialog(QDialog):
 
     def _accept(self) -> None:
         try: options = self.options()
-        except ValueError as error: QMessageBox.warning(self, "GIF 저장 설정", str(error)); return
+        except ValueError as error: QMessageBox.warning(self, "내보내기 설정", str(error)); return
         if self._remember.isChecked():
             for key, value in self._remembered_values().items(): self._preferences.setValue(f"gif_output/{key}", value)
             self._preferences.sync()
@@ -136,7 +136,7 @@ class GifOutputDialog(QDialog):
     def reject(self) -> None:
         answer = QMessageBox.question(
             self,
-            "GIF 저장 설정 취소",
+            "내보내기 설정 취소",
             "GIF를 만들지 않고 끝내시겠습니까?\n\n추후 설정 창에서 이어갈 수 있습니다.",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No,
@@ -174,9 +174,9 @@ class GifOutputDialog(QDialog):
         return {"remember": True, "blur": self._blur.isChecked(), "blur_strength": self._value(self._blur_strength).value(), "export_images": self._export_images.isChecked(), "same_path": self._same_path.isChecked(), "hide_top": self._hide_top.isChecked(), "hide_bottom": self._hide_bottom.isChecked(), "watermark": self._watermark.isChecked(), "watermark_text": self._watermark_text.text(), "watermark_opacity": self._value(self._watermark_opacity).value(), "watermark_size": self._value(self._watermark_size).value(), "timecode": self._timecode.isChecked(), "date": self._date.isChecked(), "timecode_background": self._value(self._timecode_background).value(), "timecode_horizontal": self._timecode_horizontal.currentData(), "timecode_vertical": self._timecode_vertical.currentData()}
 
     def options(self) -> GifOutputOptions:
-        if not self._gif_path.text().strip(): raise ValueError("GIF 저장 경로를 선택하세요.")
+        if not self._gif_path.text().strip(): raise ValueError("GIF 내보내기 경로를 선택하세요.")
         image_text = self._image_path.text().strip()
         if self._export_images.isChecked() and not self._same_path.isChecked() and not image_text:
-            raise ValueError("이미지 저장 경로를 선택하세요.")
+            raise ValueError("이미지 내보내기 경로를 선택하세요.")
         image_root = None if self._same_path.isChecked() or not self._export_images.isChecked() else Path(image_text)
         return GifOutputOptions(filename=self._filename.text().strip(), gif_export_root=Path(self._gif_path.text().strip()), export_images=self._export_images.isChecked(), images_with_gif=self._same_path.isChecked(), image_export_root=image_root, crop_enabled=self._hide_top.isChecked() or self._hide_bottom.isChecked(), hide_top=self._hide_top.isChecked(), hide_bottom=self._hide_bottom.isChecked(), blur_enabled=self._blur.isChecked(), blur_strength=self._value(self._blur_strength).value(), watermark_enabled=self._watermark.isChecked(), watermark_text=self._watermark_text.text(), watermark_opacity_level=self._value(self._watermark_opacity).value(), watermark_size=self._value(self._watermark_size).value(), timecode_enabled=self._timecode.isChecked(), timecode_show_date=self._date.isChecked(), timecode_background_level=self._value(self._timecode_background).value(), timecode_horizontal=str(self._timecode_horizontal.currentData()), timecode_vertical=str(self._timecode_vertical.currentData()))

@@ -5,6 +5,7 @@ from tempfile import TemporaryDirectory
 from unittest import TestCase
 
 from session_recovery import (
+    find_completed_sessions_with_images,
     find_latest_incomplete_session,
     find_marked_incomplete_sessions,
     mark_session_unfinished,
@@ -62,3 +63,16 @@ class SessionRecoveryTests(TestCase):
 
             self.assertEqual(len(candidates), 1)
             self.assertEqual(candidates[0].session_directory, session)
+
+    def test_finds_completed_session_when_images_remain(self) -> None:
+        with TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            session = root / "260828"
+            screenshots = session / "Screenshot"
+            screenshots.mkdir(parents=True)
+            (screenshots / "001.png").write_bytes(b"image")
+            (session / "Diary_0900-0910.gif").touch()
+
+            candidates = find_completed_sessions_with_images(root)
+
+            self.assertEqual([candidate.session_directory for candidate in candidates], [session])

@@ -8,12 +8,19 @@ from session_recovery import RecoveryCandidate
 
 
 class UnfinishedSessionsDialog(QDialog):
-    def __init__(self, candidates: tuple[RecoveryCandidate, ...], parent: QWidget | None = None) -> None:
+    def __init__(
+        self,
+        candidates: tuple[RecoveryCandidate, ...],
+        parent: QWidget | None = None,
+        title: str = "미완료 세션",
+        description: str = "GIF 저장을 다시 시도할 세션을 선택하세요.",
+        confirm_text: str = "내보내기 설정",
+    ) -> None:
         super().__init__(parent)
         self._candidates = candidates
-        self.setWindowTitle("미완료 세션")
+        self.setWindowTitle(title)
         layout = QVBoxLayout(self)
-        layout.addWidget(QLabel("GIF 저장을 다시 시도할 세션을 선택하세요.", self))
+        layout.addWidget(QLabel(description, self))
         self._sessions = QComboBox(self)
         for candidate in candidates:
             self._sessions.addItem(
@@ -25,7 +32,7 @@ class UnfinishedSessionsDialog(QDialog):
             QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel,
             self,
         )
-        buttons.button(QDialogButtonBox.StandardButton.Ok).setText("GIF 저장 설정")
+        buttons.button(QDialogButtonBox.StandardButton.Ok).setText(confirm_text)
         buttons.button(QDialogButtonBox.StandardButton.Cancel).setText("취소")
         buttons.accepted.connect(self.accept)
         buttons.rejected.connect(self.reject)

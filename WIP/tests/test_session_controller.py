@@ -217,3 +217,21 @@ class SessionControllerTests(TestCase):
             self.assertIs(controller.state, SessionState.IDLE)
             assert controller._session_directory is not None
             self.assertTrue((controller._session_directory / ".unfin").is_file())
+
+    def test_images_only_completion_creates_internal_gif_marker(self) -> None:
+        with TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            controller = SessionController(AppSettings(root / "export", internal_storage_root=root / "internal"))
+
+            def capture(output_directory: Path, **_options: object) -> Path:
+                path = output_directory / "001.png"
+                Image.new("RGB", (8, 8), "green").save(path)
+                return path
+
+            controller._screenshot_capture.capture = capture
+            controller.start()
+            controller.complete_with_images_only()
+
+            assert controller._session_directory is not None
+            self.assertEqual(len(list(controller._session_directory.glob("Diary_*.gif"))), 1)
+            self.assertIs(controller.state, SessionState.IDLE)

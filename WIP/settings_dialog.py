@@ -34,6 +34,7 @@ class SettingsDialog(QDialog):
     settings_saved = Signal(object)
     reset_requested = Signal()
     unfinished_sessions_requested = Signal()
+    completed_sessions_requested = Signal()
 
     def __init__(self, settings: AppSettings, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -102,6 +103,8 @@ class SettingsDialog(QDialog):
         about_button.clicked.connect(self._show_about)
         unfinished_button = QPushButton("미완료 세션 GIF 저장", self)
         unfinished_button.clicked.connect(self.unfinished_sessions_requested.emit)
+        completed_button = QPushButton("이전 세션 GIF 다시 만들기", self)
+        completed_button.clicked.connect(self.completed_sessions_requested.emit)
 
         buttons = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Save | QDialogButtonBox.StandardButton.Cancel,
@@ -119,6 +122,7 @@ class SettingsDialog(QDialog):
         layout.addWidget(help_button)
         layout.addWidget(about_button)
         layout.addWidget(unfinished_button)
+        layout.addWidget(completed_button)
         layout.addWidget(buttons)
 
     def _path_row(self, line_edit: QLineEdit, label: str) -> QWidget:

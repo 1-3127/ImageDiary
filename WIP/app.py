@@ -23,7 +23,12 @@ from gif_output_options import GifOutputOptions
 from error_reporting import issue_report_guidance, show_retry_message
 from recovery_dialog import RecoveryAction, ask_recovery_action
 from session_controller import SessionController, SessionState
-from session_recovery import find_latest_incomplete_session, find_marked_incomplete_sessions
+from session_recovery import (
+    find_completed_sessions_with_images,
+    find_latest_incomplete_session,
+    find_marked_incomplete_sessions,
+    mark_session_unfinished,
+)
 from session_status_widget import SessionStatusWidget
 from settings import AppSettings
 from settings_repository import SettingsRepository
@@ -148,6 +153,9 @@ class MainWindow(QMainWindow):
         dialog.unfinished_sessions_requested.connect(
             lambda: self._open_unfinished_session(dialog)
         )
+        dialog.completed_sessions_requested.connect(
+            lambda: self._open_completed_session(dialog)
+        )
         dialog.exec()
 
     def _open_unfinished_session(self, settings_dialog: SettingsDialog) -> None:
@@ -156,6 +164,24 @@ class MainWindow(QMainWindow):
             QMessageBox.information(settings_dialog, "미완료 세션", "GIF 저장을 다시 시도할 미완료 세션이 없습니다.")
             return
         dialog = UnfinishedSessionsDialog(candidates, settings_dialog)
+        if not dialog.exec():
+            return
+        settings_dialog.reject()
+        self._controller.prepare_recovered_finish(dialog.selected_candidate())
+        self._finish()
+
+    def _open_completed_session(self, settings_dialog: SettingsDialog) -> None:
+        candidates = find_completed_sessions_with_images(self._settings.internal_storage_root)
+        if not candidates:
+            QMessageBox.information(settings_dialog, "이전 세션 GIF 다시 만들기", "내부 이미지가 남아 있는 완료 세션이 없습니다.")
+            return
+        dialog = UnfinishedSessionsDialog(
+            candidates,
+            settings_dialog,
+            title="이전 세션 GIF 다시 만들기",
+            description="GIF를 다시 만들 세션 폴더를 선택하세요.",
+            confirm_text="내보내기 설정",
+        )
         if not dialog.exec():
             return
         settings_dialog.reject()
@@ -296,6 +322,8 @@ class MainWindow(QMainWindow):
         elif action is RecoveryAction.FINISH:
             self._controller.prepare_recovered_finish(candidate)
             self._finish()
+        else:
+            mark_session_unfinished(candidate.session_directory)
 
     @staticmethod
     def _open_output_directory(directory: Path) -> None:
