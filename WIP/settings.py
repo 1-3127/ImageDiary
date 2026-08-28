@@ -31,6 +31,11 @@ class AppSettings:
     run_at_login: bool = False
     always_on_top: bool = False
     internal_retention_days: int = 7
+    retention_days_enabled: bool = True
+    retention_count_enabled: bool = False
+    retention_keep_count: int = 2
+    retention_size_enabled: bool = False
+    retention_max_size_mb: int = 1024
     gif_frame_duration_ms: int = 500
     gif_loop: int = 0
     open_output_on_finish: bool = True
@@ -44,6 +49,10 @@ class AppSettings:
             raise ValueError("image_quality must be between 1 and 100")
         if self.internal_retention_days < 1:
             raise ValueError("internal_retention_days must be at least 1")
+        if self.retention_keep_count < 1:
+            raise ValueError("retention_keep_count must be at least 1")
+        if self.retention_max_size_mb < 1:
+            raise ValueError("retention_max_size_mb must be at least 1")
         if self.capture_interval_seconds not in SUPPORTED_CAPTURE_INTERVAL_SECONDS:
             raise ValueError("Unsupported capture interval")
         if self.capture_target not in SUPPORTED_CAPTURE_TARGETS:

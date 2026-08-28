@@ -26,6 +26,11 @@ def main() -> int:
         cleanup_expired_sessions(
             settings.internal_storage_root,
             settings.internal_retention_days,
+            days_enabled=settings.retention_days_enabled,
+            count_enabled=settings.retention_count_enabled,
+            keep_count=settings.retention_keep_count,
+            size_enabled=settings.retention_size_enabled,
+            max_size_mb=settings.retention_max_size_mb,
         )
     except OSError as error:
         cleanup_error = str(error)

@@ -8,6 +8,34 @@ from retention import cleanup_expired_sessions
 
 
 class RetentionTests(TestCase):
+    def test_count_rule_removes_sessions_over_limit(self) -> None:
+        with TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            sessions = [root / "260825", root / "260826", root / "260827"]
+            for session in sessions:
+                session.mkdir()
+
+            removed = cleanup_expired_sessions(
+                root, 7, datetime(2026, 8, 28), days_enabled=False,
+                count_enabled=True, keep_count=2,
+            )
+
+            self.assertEqual(removed, [sessions[0]])
+
+    def test_size_rule_removes_oldest_sessions_until_under_limit(self) -> None:
+        with TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            older = root / "260825"; newer = root / "260826"
+            for session in (older, newer):
+                session.mkdir(); (session / "image.bin").write_bytes(b"x" * 700_000)
+
+            removed = cleanup_expired_sessions(
+                root, 7, datetime(2026, 8, 28), days_enabled=False,
+                size_enabled=True, max_size_mb=1,
+            )
+
+            self.assertEqual(removed, [older])
+
     def test_removes_only_expired_internal_session_directories(self) -> None:
         with TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)

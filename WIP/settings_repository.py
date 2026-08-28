@@ -67,6 +67,21 @@ class SettingsRepository:
                     defaults.internal_retention_days,
                 )
             ),
+            retention_days_enabled=self._as_bool(
+                self._backend.value("storage/retention_days_enabled", defaults.retention_days_enabled)
+            ),
+            retention_count_enabled=self._as_bool(
+                self._backend.value("storage/retention_count_enabled", defaults.retention_count_enabled)
+            ),
+            retention_keep_count=int(
+                self._backend.value("storage/retention_keep_count", defaults.retention_keep_count)
+            ),
+            retention_size_enabled=self._as_bool(
+                self._backend.value("storage/retention_size_enabled", defaults.retention_size_enabled)
+            ),
+            retention_max_size_mb=int(
+                self._backend.value("storage/retention_max_size_mb", defaults.retention_max_size_mb)
+            ),
             gif_frame_duration_ms=int(
                 self._backend.value(
                     "gif/frame_duration_ms",
@@ -95,6 +110,11 @@ class SettingsRepository:
         self._backend.setValue(
             "storage/internal_retention_days", settings.internal_retention_days
         )
+        self._backend.setValue("storage/retention_days_enabled", settings.retention_days_enabled)
+        self._backend.setValue("storage/retention_count_enabled", settings.retention_count_enabled)
+        self._backend.setValue("storage/retention_keep_count", settings.retention_keep_count)
+        self._backend.setValue("storage/retention_size_enabled", settings.retention_size_enabled)
+        self._backend.setValue("storage/retention_max_size_mb", settings.retention_max_size_mb)
         self._backend.setValue("gif/frame_duration_ms", settings.gif_frame_duration_ms)
         self._backend.setValue("gif/loop", settings.gif_loop)
         self._backend.setValue(

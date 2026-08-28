@@ -74,6 +74,9 @@ class MainWindowTests(TestCase):
         self.assertEqual(dialog._interval.singleStep(), 5)
         self.assertEqual(dialog._interval.value(), 15)
         self.assertEqual(dialog._capture_target.currentData(), "all")
+        self.assertFalse(dialog._retention_count_enabled.isChecked())
+        self.assertFalse(dialog._retention_size_enabled.isChecked())
+        self.assertTrue(dialog._retention_days_enabled.isChecked())
         dialog.close()
 
     def test_gif_output_dialog_defaults_to_exporting_images_with_gif(self) -> None:

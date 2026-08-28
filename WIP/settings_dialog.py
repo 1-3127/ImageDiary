@@ -86,6 +86,37 @@ class SettingsDialog(QDialog):
         self._run_at_login.setChecked(self._settings.run_at_login)
         form.addRow("", self._run_at_login)
 
+        self._retention_count_enabled = QCheckBox("개수 기준 자동 정리", self)
+        self._retention_count_enabled.setChecked(self._settings.retention_count_enabled)
+        self._retention_keep_count = QSpinBox(self)
+        self._retention_keep_count.setRange(1, 999)
+        self._retention_keep_count.setSuffix("개 세션")
+        self._retention_keep_count.setValue(self._settings.retention_keep_count)
+        form.addRow(self._retention_count_enabled)
+        form.addRow("최대 보존 세션 수:", self._retention_keep_count)
+
+        self._retention_size_enabled = QCheckBox("용량 기준 자동 정리", self)
+        self._retention_size_enabled.setChecked(self._settings.retention_size_enabled)
+        self._retention_max_size_mb = QSpinBox(self)
+        self._retention_max_size_mb.setRange(1, 1024 * 1024)
+        self._retention_max_size_mb.setSuffix(" MB")
+        self._retention_max_size_mb.setValue(self._settings.retention_max_size_mb)
+        form.addRow(self._retention_size_enabled)
+        form.addRow("최대 내부 저장 용량:", self._retention_max_size_mb)
+
+        self._retention_days_enabled = QCheckBox("날짜 기준 자동 정리", self)
+        self._retention_days_enabled.setChecked(self._settings.retention_days_enabled)
+        self._retention_days = QSpinBox(self)
+        self._retention_days.setRange(1, 3650)
+        self._retention_days.setSuffix("일")
+        self._retention_days.setValue(self._settings.internal_retention_days)
+        form.addRow(self._retention_days_enabled)
+        form.addRow("마지막 활동 후:", self._retention_days)
+        self._retention_count_enabled.toggled.connect(self._update_retention_controls)
+        self._retention_size_enabled.toggled.connect(self._update_retention_controls)
+        self._retention_days_enabled.toggled.connect(self._update_retention_controls)
+        self._update_retention_controls()
+
         note = QLabel("진행 중 변경한 설정은 다음 세션부터 적용됩니다.", self)
         note.setWordWrap(True)
 
@@ -148,6 +179,12 @@ class SettingsDialog(QDialog):
             capture_format=self._format.currentText(),
             image_quality=self._quality.value(),
             run_at_login=self._run_at_login.isChecked(),
+            retention_count_enabled=self._retention_count_enabled.isChecked(),
+            retention_keep_count=self._retention_keep_count.value(),
+            retention_size_enabled=self._retention_size_enabled.isChecked(),
+            retention_max_size_mb=self._retention_max_size_mb.value(),
+            retention_days_enabled=self._retention_days_enabled.isChecked(),
+            internal_retention_days=self._retention_days.value(),
         )
         self.settings_saved.emit(updated)
         self.accept()
@@ -159,12 +196,18 @@ class SettingsDialog(QDialog):
             return
         self._interval_value.setText(f"{snapped}분")
 
+    def _update_retention_controls(self) -> None:
+        self._retention_keep_count.setEnabled(self._retention_count_enabled.isChecked())
+        self._retention_max_size_mb.setEnabled(self._retention_size_enabled.isChecked())
+        self._retention_days.setEnabled(self._retention_days_enabled.isChecked())
+
     def _show_help(self) -> None:
         dialog = QMessageBox(self); dialog.setWindowTitle("설정 도움말"); dialog.setTextFormat(Qt.TextFormat.RichText); dialog.setTextInteractionFlags(Qt.TextInteractionFlag.TextBrowserInteraction)
         dialog.setText(
             "캡처 간격·대상·원본 포맷·Windows 로그인 시 시작을 다음 세션 기본값으로 정합니다.<br><br>"
             "<b>이전 세션 GIF 다시 만들기</b>는 취소·실패한 미완료 세션과 내부 이미지가 남은 완료 세션의 GIF를 새로 만듭니다.<br>"
             "<b>데이터 정리</b>는 내부 저장소의 최신 2개 외 세션을 휴지통으로 이동합니다.<br><br>"
+            "자동 정리는 개수·용량·날짜 기준을 동시에 켤 수 있으며, 하나라도 기준을 넘으면 오래된 세션부터 정리합니다.<br><br>"
             '<a href="https://github.com/1-3127/ImageDiary/blob/main/docs/quick_start.md">GitHub 간단 사용 설명서</a>'
         ); dialog.exec()
 
