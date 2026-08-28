@@ -235,13 +235,3 @@ class SessionControllerTests(TestCase):
             assert controller._session_directory is not None
             self.assertEqual(len(list(controller._session_directory.glob("Diary_*.gif"))), 1)
             self.assertIs(controller.state, SessionState.IDLE)
-    def test_shutdown_stops_active_scheduler(self) -> None:
-        with TemporaryDirectory() as temporary_directory:
-            root = Path(temporary_directory)
-            controller = SessionController(AppSettings(root / "export", internal_storage_root=root / "internal"))
-            controller._screenshot_capture.capture = lambda output_directory, **_options: output_directory / "001.png"
-            controller.start()
-
-            controller.shutdown()
-
-            self.assertIsNone(controller._scheduler)

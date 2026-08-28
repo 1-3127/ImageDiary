@@ -90,7 +90,6 @@ class SessionController(QObject):
         """앱 종료 전에 활성 타이머와 보류 중인 내보내기 상태를 정리한다."""
         if self._scheduler is not None:
             self._scheduler.stop()
-            self._scheduler.deleteLater()
             self._scheduler = None
         self._pending_images_only_options = None
 
