@@ -86,6 +86,14 @@ class SessionController(QObject):
     def update_settings(self, settings: AppSettings) -> None:
         self._next_settings = settings
 
+    def shutdown(self) -> None:
+        """앱 종료 전에 활성 타이머와 보류 중인 내보내기 상태를 정리한다."""
+        if self._scheduler is not None:
+            self._scheduler.stop()
+            self._scheduler.deleteLater()
+            self._scheduler = None
+        self._pending_images_only_options = None
+
     def resume(self, candidate: RecoveryCandidate) -> None:
         if self._state is not SessionState.IDLE:
             return
