@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from PySide6.QtCore import QSettings, Qt, QTimer, Signal
+from PySide6.QtCore import QSettings, Qt, Signal
 from PySide6.QtGui import QColor, QFont, QPainter
 from PySide6.QtWidgets import (QButtonGroup, QCheckBox, QComboBox, QDialog, QDialogButtonBox, QFileDialog,
     QFormLayout, QGroupBox, QHBoxLayout, QLabel, QLineEdit, QMessageBox,
@@ -14,7 +14,7 @@ from gif_output_options import GifOutputOptions
 
 class _Preview(QWidget):
     def __init__(self, watermark: bool, parent: QWidget) -> None:
-        super().__init__(parent); self.watermark = watermark; self.text = "ImageDiary"; self.size = 2; self.opacity = 2; self.date = True; self.background = 2; self.horizontal = "left"; self.vertical = "upper_middle"; self.setFixedHeight(100 if watermark else 80)
+        super().__init__(parent); self.watermark = watermark; self.text = "ImageDiary"; self.size = 2; self.opacity = 2; self.date = True; self.background = 2; self.horizontal = "left"; self.vertical = "upper_middle"; self.setFixedHeight(100 if watermark else 120)
 
     def paintEvent(self, _event: object) -> None:
         painter = QPainter(self); painter.fillRect(self.rect(), QColor("#4a4a4a"))
@@ -22,11 +22,14 @@ class _Preview(QWidget):
             painter.setPen(QColor(255, 255, 255, {1: 35, 2: 125, 3: 230}[self.opacity]))
             font = QFont(); font.setPixelSize({1: 14, 2: 22, 3: 34}[self.size]); painter.setFont(font)
             text = self.text or "ImageDiary"; rect = painter.fontMetrics().boundingRect(text)
-            for y in range(-self.height(), self.height() * 2, max(38, rect.height() + 24)):
-                for x in range(-self.width(), self.width() * 2, max(110, rect.width() + 56)):
+            step_x, step_y = max(110, rect.width() + 56), max(38, rect.height() + 24)
+            for y in range(self.height() // 2, self.height() * 2, step_y):
+                for x in range(self.width() // 2, self.width() * 2, step_x):
+                    painter.save(); painter.translate(x, y); painter.rotate(-45); painter.drawText(-rect.width() // 2, rect.height() // 2, text); painter.restore()
+                for x in range(self.width() // 2 - step_x, -self.width(), -step_x):
                     painter.save(); painter.translate(x, y); painter.rotate(-45); painter.drawText(-rect.width() // 2, rect.height() // 2, text); painter.restore()
         else:
-            text = "08/26 19:15" if self.date else "19:15"; font = QFont(); font.setPixelSize(28); painter.setFont(font)
+            text = "08/26 19:15" if self.date else "19:15"; font = QFont(); font.setPixelSize(22); painter.setFont(font)
             rect = painter.fontMetrics().boundingRect(text); x = 10 if self.horizontal == "left" else self.width() // 2 - rect.width() // 2 if self.horizontal == "center" else self.width() - rect.width() - 10; ratios = {"top": 0, "upper_middle": .25, "middle": .5, "lower_middle": .75, "bottom": 1}; y, padding = int((self.height() - rect.height()) * ratios[self.vertical]), 8
             painter.fillRect(x-padding, y-padding, rect.width()+padding*2, rect.height()+padding*2, QColor(0, 0, 0, {1: 35, 2: 145, 3: 245}[self.background])); painter.setPen(QColor("white")); painter.drawText(x, y+rect.height(), text)
         painter.end()
@@ -64,30 +67,16 @@ class _CombinedPreview(QWidget):
         self.blur = False; self.blur_strength = 2; self.hide_top = False; self.hide_bottom = False
         self.watermark = False; self.watermark_text = "ImageDiary"; self.watermark_opacity = 2; self.watermark_size = 2
         self.timecode = False; self.date = True; self.timecode_background = 2; self.horizontal = "left"; self.vertical = "upper_middle"
-        self.playback_speed = 2; self._sample_index = 0
-        self._timer = QTimer(self); self._timer.timeout.connect(self._advance_sample)
+        self.playback_speed = 2
         self.setFixedHeight(150)
 
     def set_playback_speed(self, speed: int) -> None:
         self.playback_speed = speed
-        if self.isVisible(): self._timer.start({1: 500, 2: 1000, 3: 1500}[speed])
-
-    def showEvent(self, event: object) -> None:
-        self._timer.start({1: 500, 2: 1000, 3: 1500}[self.playback_speed])
-        super().showEvent(event)
-
-    def hideEvent(self, event: object) -> None:
-        self._timer.stop()
-        super().hideEvent(event)
-
-    def _advance_sample(self) -> None:
-        self._sample_index = (self._sample_index + 1) % 3
-        self.update()
 
     def paintEvent(self, _event: object) -> None:
         painter = QPainter(self); painter.fillRect(self.rect(), QColor("#272b33")); area = self.rect().adjusted(8, 8, -8, -8)
         painter.fillRect(area, QColor("#6686a4")); painter.fillRect(area.x(), area.y(), area.width(), 18, QColor("#d7dde6")); painter.fillRect(area.x(), area.bottom() - 16, area.width(), 17, QColor("#1976d2"))
-        font = QFont(); font.setPixelSize(24); painter.setFont(font); title = f"ImageDiary {self._sample_index + 1}"
+        font = QFont(); font.setPixelSize(24); painter.setFont(font); title = "ImageDiary"
         if self.blur:
             radius = {1: 1, 2: 3, 3: 7}[self.blur_strength]; painter.setPen(QColor(255, 255, 255, 45))
             for x in range(-radius, radius + 1):
@@ -95,14 +84,17 @@ class _CombinedPreview(QWidget):
         painter.setPen(QColor("white")); painter.drawText(area.x() + 20, area.y() + 70, title)
         if self.watermark:
             font.setPixelSize({1: 16, 2: 24, 3: 34}[self.watermark_size]); painter.setFont(font); painter.setPen(QColor(255, 255, 255, {1: 35, 2: 125, 3: 230}[self.watermark_opacity])); text = self.watermark_text or "ImageDiary"; rect = painter.fontMetrics().boundingRect(text)
-            for y in range(area.top() - area.height(), area.bottom() + area.height(), max(40, rect.height() + 26)):
-                for x in range(area.left() - area.width(), area.right() + area.width(), max(120, rect.width() + 58)):
+            step_x, step_y = max(120, rect.width() + 58), max(40, rect.height() + 26)
+            for y in range(area.center().y(), area.bottom() + area.height(), step_y):
+                for x in range(area.center().x(), area.right() + area.width(), step_x):
+                    painter.save(); painter.translate(x, y); painter.rotate(-45); painter.drawText(-rect.width() // 2, rect.height() // 2, text); painter.restore()
+                for x in range(area.center().x() - step_x, area.left() - area.width(), -step_x):
                     painter.save(); painter.translate(x, y); painter.rotate(-45); painter.drawText(-rect.width() // 2, rect.height() // 2, text); painter.restore()
         mask_height = 18
         if self.hide_top: painter.fillRect(area.x(), area.y(), area.width(), mask_height, QColor("black"))
         if self.hide_bottom: painter.fillRect(area.x(), area.bottom() - mask_height + 1, area.width(), mask_height, QColor("black"))
         if self.timecode:
-            minute = 15 + self._sample_index * 5; text = f"08/28 19:{minute:02d}" if self.date else f"19:{minute:02d}"; font.setPixelSize(18); painter.setFont(font); rect = painter.fontMetrics().boundingRect(text); x = area.x() + 10 if self.horizontal == "left" else area.center().x() - rect.width() // 2 if self.horizontal == "center" else area.right() - rect.width() - 10; ratios = {"top": 0, "upper_middle": .25, "middle": .5, "lower_middle": .75, "bottom": 1}; y = area.y() + int((area.height() - rect.height()) * ratios[self.vertical]); painter.fillRect(x - 6, y - 5, rect.width() + 12, rect.height() + 10, QColor(0, 0, 0, {1: 35, 2: 145, 3: 245}[self.timecode_background])); painter.setPen(QColor("white")); painter.drawText(x, y + rect.height(), text)
+            text = "08/28 19:15" if self.date else "19:15"; font.setPixelSize(18); painter.setFont(font); rect = painter.fontMetrics().boundingRect(text); x = area.x() + 10 if self.horizontal == "left" else area.center().x() - rect.width() // 2 if self.horizontal == "center" else area.right() - rect.width() - 10; ratios = {"top": 0, "upper_middle": .25, "middle": .5, "lower_middle": .75, "bottom": 1}; y = area.y() + int((area.height() - rect.height()) * ratios[self.vertical]); painter.fillRect(x - 6, y - 5, rect.width() + 12, rect.height() + 10, QColor(0, 0, 0, {1: 35, 2: 145, 3: 245}[self.timecode_background])); painter.setPen(QColor("white")); painter.drawText(x, y + rect.height(), text)
         painter.end()
 
 
@@ -145,7 +137,7 @@ class GifOutputDialog(QDialog):
         form.addRow(self._timecode); form.addRow(self._date); form.addRow("타임코드 배경 선명도", self._timecode_background); form.addRow("타임코드 가로 위치", self._timecode_horizontal); form.addRow("타임코드 세로 위치", self._timecode_vertical); form.addRow("타임코드 미리보기", self._timecode_preview); timecode_layout.addWidget(group); timecode_layout.addWidget(QLabel("각 이미지의 캡처 시각 표시 위치와 배경을 설정합니다.", timecode_page)); timecode_layout.addStretch(); tabs.addTab(timecode_page, "타임코드")
         tabs.clear(); tabs.addTab(timecode_page, "타임코드"); tabs.addTab(mask_page, "블러/마스킹"); tabs.addTab(watermark_page, "워터마크"); tabs.addTab(storage_page, "내보내기")
         self._image_only = QPushButton("GIF 없이 이미지만 내보내기", storage_page); self._image_only.setEnabled(False); self._image_only.clicked.connect(self._save_images_only); storage_layout.addWidget(self._image_only)
-        storage_layout.addWidget(QLabel("통합 미리보기", storage_page)); self._combined_preview = _CombinedPreview(storage_page); storage_layout.addWidget(self._combined_preview)
+        storage_layout.addWidget(QLabel("통합 미리보기", storage_page)); self._combined_preview = _CombinedPreview(storage_page); storage_layout.addWidget(self._combined_preview); self._playback_preview_text = QLabel(storage_page); storage_layout.addWidget(self._playback_preview_text)
         note = QLabel("후처리는 GIF에만 적용됩니다.", self); note.setWordWrap(True); layout.addWidget(note)
         self._remember = QCheckBox("설정 기억하기", self); layout.addWidget(self._remember)
         buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Cancel | QDialogButtonBox.StandardButton.Ok, Qt.Orientation.Horizontal, self); buttons.button(QDialogButtonBox.StandardButton.Ok).setText("GIF 생성"); buttons.button(QDialogButtonBox.StandardButton.Cancel).setText("취소"); buttons.accepted.connect(self._accept); buttons.rejected.connect(self.reject); self._return_button = QPushButton("세션으로 돌아가기", self); self._return_button.clicked.connect(self._return_to_recording); button_row = QHBoxLayout(); button_row.addWidget(self._return_button); button_row.addStretch(); button_row.addWidget(buttons); layout.addLayout(button_row)
@@ -173,7 +165,7 @@ class GifOutputDialog(QDialog):
         timecode_enabled = self._timecode.isChecked(); self._date.setEnabled(timecode_enabled); self._timecode_background.setEnabled(timecode_enabled); self._timecode_horizontal.setEnabled(timecode_enabled); self._timecode_vertical.setEnabled(timecode_enabled); self._timecode_preview.setEnabled(timecode_enabled); self._refresh_previews()
 
     def _refresh_previews(self) -> None:
-        self._watermark_preview.text = self._watermark_text.text(); self._watermark_preview.size = self._value(self._watermark_size).value(); self._watermark_preview.opacity = self._value(self._watermark_opacity).value(); self._watermark_preview.update(); self._blur_preview.strength = self._value(self._blur_strength).value(); self._blur_preview.update(); self._mask_preview.top = self._hide_top.isChecked(); self._mask_preview.bottom = self._hide_bottom.isChecked(); self._mask_preview.update(); self._timecode_preview.date = self._date.isChecked(); self._timecode_preview.background = self._value(self._timecode_background).value(); self._timecode_preview.horizontal = str(self._timecode_horizontal.currentData()); self._timecode_preview.vertical = str(self._timecode_vertical.currentData()); self._timecode_preview.update(); self._combined_preview.blur = self._blur.isChecked(); self._combined_preview.blur_strength = self._value(self._blur_strength).value(); self._combined_preview.hide_top = self._hide_top.isChecked(); self._combined_preview.hide_bottom = self._hide_bottom.isChecked(); self._combined_preview.watermark = self._watermark.isChecked(); self._combined_preview.watermark_text = self._watermark_text.text(); self._combined_preview.watermark_opacity = self._value(self._watermark_opacity).value(); self._combined_preview.watermark_size = self._value(self._watermark_size).value(); self._combined_preview.timecode = self._timecode.isChecked(); self._combined_preview.date = self._date.isChecked(); self._combined_preview.timecode_background = self._value(self._timecode_background).value(); self._combined_preview.horizontal = str(self._timecode_horizontal.currentData()); self._combined_preview.vertical = str(self._timecode_vertical.currentData()); self._combined_preview.set_playback_speed(self._playback_group.checkedId()); self._combined_preview.update()
+        self._watermark_preview.text = self._watermark_text.text(); self._watermark_preview.size = self._value(self._watermark_size).value(); self._watermark_preview.opacity = self._value(self._watermark_opacity).value(); self._watermark_preview.update(); self._blur_preview.strength = self._value(self._blur_strength).value(); self._blur_preview.update(); self._mask_preview.top = self._hide_top.isChecked(); self._mask_preview.bottom = self._hide_bottom.isChecked(); self._mask_preview.update(); self._timecode_preview.date = self._date.isChecked(); self._timecode_preview.background = self._value(self._timecode_background).value(); self._timecode_preview.horizontal = str(self._timecode_horizontal.currentData()); self._timecode_preview.vertical = str(self._timecode_vertical.currentData()); self._timecode_preview.update(); self._combined_preview.blur = self._blur.isChecked(); self._combined_preview.blur_strength = self._value(self._blur_strength).value(); self._combined_preview.hide_top = self._hide_top.isChecked(); self._combined_preview.hide_bottom = self._hide_bottom.isChecked(); self._combined_preview.watermark = self._watermark.isChecked(); self._combined_preview.watermark_text = self._watermark_text.text(); self._combined_preview.watermark_opacity = self._value(self._watermark_opacity).value(); self._combined_preview.watermark_size = self._value(self._watermark_size).value(); self._combined_preview.timecode = self._timecode.isChecked(); self._combined_preview.date = self._date.isChecked(); self._combined_preview.timecode_background = self._value(self._timecode_background).value(); self._combined_preview.horizontal = str(self._timecode_horizontal.currentData()); self._combined_preview.vertical = str(self._timecode_vertical.currentData()); speed = self._playback_group.checkedId(); self._combined_preview.set_playback_speed(speed); self._playback_preview_text.setText({1: "재생 속도: 빠르게 (기본 표시 시간의 0.5배)", 2: "재생 속도: 기본 (기본 표시 시간)", 3: "재생 속도: 느리게 (기본 표시 시간의 1.5배)"}[speed]); self._combined_preview.update()
 
     def _accept(self) -> None:
         try: options = self.options()

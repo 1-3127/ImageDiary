@@ -101,6 +101,8 @@ class MainWindowTests(TestCase):
         dialog._playback_group.button(1).setChecked(True)
 
         self.assertEqual(dialog._combined_preview.playback_speed, 1)
+        self.assertFalse(hasattr(dialog._combined_preview, "_timer"))
+        self.assertIn("0.5배", dialog._playback_preview_text.text())
         tabs = dialog._help_button.parent()
         self.assertIs(tabs.cornerWidget(Qt.Corner.TopRightCorner), dialog._help_button)
         dialog.close()

@@ -61,8 +61,17 @@ class GifPostProcessor:
         overlay = Image.new("RGBA", frame.size, (0, 0, 0, 0))
         step_x = max(180, rotated.width + 80)
         step_y = max(110, rotated.height + 50)
-        for y in range(-step_y, frame.height + step_y, step_y):
-            for x in range(-step_x, frame.width + step_x, step_x):
+        center_x = (frame.width - rotated.width) // 2
+        center_y = (frame.height - rotated.height) // 2
+        for y in range(center_y, frame.height + step_y, step_y):
+            for x in range(center_x, frame.width + step_x, step_x):
+                overlay.alpha_composite(rotated, (x, y))
+            for x in range(center_x - step_x, -step_x, -step_x):
+                overlay.alpha_composite(rotated, (x, y))
+        for y in range(center_y - step_y, -step_y, -step_y):
+            for x in range(center_x, frame.width + step_x, step_x):
+                overlay.alpha_composite(rotated, (x, y))
+            for x in range(center_x - step_x, -step_x, -step_x):
                 overlay.alpha_composite(rotated, (x, y))
         frame.paste(overlay, (0, 0), overlay)
         rotated.close()
