@@ -147,6 +147,16 @@ class SessionController(QObject):
         if self._session_directory is not None:
             mark_session_unfinished(self._session_directory)
 
+    def finish_without_gif(self) -> None:
+        """GIF 없이 현재 캡처를 미완료 세션으로 보관하고 종료한다."""
+        if self._state is not SessionState.RECORDING:
+            return
+        if self._scheduler is not None:
+            self._scheduler.stop()
+        self.mark_current_session_unfinished()
+        self.status_changed.emit("GIF 없이 종료했습니다. 미완료 세션으로 보관했습니다.")
+        self._set_state(SessionState.IDLE)
+
     def retry_finish(self, output_options: GifOutputOptions) -> None:
         if self._state is not SessionState.IDLE or self._session_directory is None:
             return

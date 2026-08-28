@@ -204,3 +204,16 @@ class SessionControllerTests(TestCase):
 
             self.assertIs(controller.state, SessionState.IDLE)
             self.assertTrue((session / ".unfin").is_file())
+
+    def test_finish_without_gif_marks_active_session_and_returns_idle(self) -> None:
+        with TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            controller = SessionController(AppSettings(root / "export", internal_storage_root=root / "internal"))
+            controller._screenshot_capture.capture = lambda output_directory, **_options: output_directory / "001.png"
+            controller.start()
+
+            controller.finish_without_gif()
+
+            self.assertIs(controller.state, SessionState.IDLE)
+            assert controller._session_directory is not None
+            self.assertTrue((controller._session_directory / ".unfin").is_file())

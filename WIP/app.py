@@ -125,8 +125,10 @@ class MainWindow(QMainWindow):
         dialog.image_only_requested.connect(self._controller.save_images_only)
         if dialog.exec():
             self._controller.finish(dialog.options())
-        else:
+        elif dialog.return_to_session_requested:
             self._controller.cancel_finish()
+        else:
+            self._controller.finish_without_gif()
 
     def _apply_state(self, state: SessionState) -> None:
         is_idle = state is SessionState.IDLE

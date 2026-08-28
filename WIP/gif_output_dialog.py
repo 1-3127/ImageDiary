@@ -58,7 +58,11 @@ class _MaskPreview(QWidget):
 class GifOutputDialog(QDialog):
     image_only_requested = Signal(object)
     def __init__(self, default_filename: str, default_export_root: Path, parent: QWidget | None = None) -> None:
-        super().__init__(parent); self.setWindowTitle("GIF 저장 설정"); self._root = default_export_root; self._preferences = QSettings("ImageDiary", "ImageDiary"); self._build(default_filename); self._load_preferences(); self._update()
+        super().__init__(parent); self.setWindowTitle("GIF 저장 설정"); self._root = default_export_root; self._preferences = QSettings("ImageDiary", "ImageDiary"); self._return_to_session = False; self._build(default_filename); self._load_preferences(); self._update()
+
+    @property
+    def return_to_session_requested(self) -> bool:
+        return self._return_to_session
 
     def _build(self, filename: str) -> None:
         layout = QVBoxLayout(self); tabs = QTabWidget(self); layout.addWidget(tabs)
@@ -87,7 +91,7 @@ class GifOutputDialog(QDialog):
         self._image_only = QPushButton("GIF없이 이미지만 저장", self); self._image_only.setEnabled(False); self._image_only.clicked.connect(self._save_images_only)
         self._remember = QCheckBox("설정 기억하기", self); layout.addWidget(self._image_only); layout.addWidget(self._remember)
         note = QLabel("후처리는 GIF에만 적용됩니다.", self); note.setWordWrap(True); layout.addWidget(note)
-        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Cancel | QDialogButtonBox.StandardButton.Ok, Qt.Orientation.Horizontal, self); buttons.button(QDialogButtonBox.StandardButton.Ok).setText("GIF 생성"); buttons.accepted.connect(self._accept); buttons.rejected.connect(self.reject); layout.addWidget(buttons)
+        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Cancel | QDialogButtonBox.StandardButton.Ok, Qt.Orientation.Horizontal, self); buttons.button(QDialogButtonBox.StandardButton.Ok).setText("GIF 생성"); buttons.button(QDialogButtonBox.StandardButton.Cancel).setText("취소"); self._return_button = buttons.addButton("세션으로 돌아가기", QDialogButtonBox.ButtonRole.ActionRole); buttons.accepted.connect(self._accept); buttons.rejected.connect(self.reject); self._return_button.clicked.connect(self._return_to_recording); layout.addWidget(buttons)
         self._export_images.toggled.connect(self._update); self._same_path.toggled.connect(self._update); self._blur.toggled.connect(self._update); self._hide_top.toggled.connect(self._refresh_previews); self._hide_bottom.toggled.connect(self._refresh_previews); self._watermark.toggled.connect(self._update); self._timecode.toggled.connect(self._update)
         self._watermark_text.textChanged.connect(self._refresh_previews); self._value(self._watermark_size).valueChanged.connect(self._refresh_previews); self._value(self._watermark_opacity).valueChanged.connect(self._refresh_previews); self._value(self._blur_strength).valueChanged.connect(self._refresh_previews); self._value(self._timecode_background).valueChanged.connect(self._refresh_previews); self._date.toggled.connect(self._refresh_previews); self._timecode_horizontal.currentIndexChanged.connect(self._refresh_previews); self._timecode_vertical.currentIndexChanged.connect(self._refresh_previews); self._refresh_previews()
 
@@ -124,6 +128,21 @@ class GifOutputDialog(QDialog):
             self._preferences.setValue("gif_output/remember", False)
             self._preferences.sync()
         self.accept()
+
+    def _return_to_recording(self) -> None:
+        self._return_to_session = True
+        super().reject()
+
+    def reject(self) -> None:
+        answer = QMessageBox.question(
+            self,
+            "GIF 저장 설정 취소",
+            "GIF를 만들지 않고 끝내시겠습니까?\n\n추후 설정 창에서 이어갈 수 있습니다.",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if answer is QMessageBox.StandardButton.Yes:
+            super().reject()
 
     def _save_images_only(self) -> None:
         answer = QMessageBox.question(self, "이미지 저장", "정말 GIF없이 이미지만 저장하시겠습니까?")
