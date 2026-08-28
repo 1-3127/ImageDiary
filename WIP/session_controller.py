@@ -52,6 +52,7 @@ class SessionController(QObject):
         self._gif_builder = GifBuilder()
         self._file_exporter = FileExporter()
         self._storage = SessionStorage(settings.storage_root)
+        self._pending_images_only_options: GifOutputOptions | None = None
 
     @property
     def state(self) -> SessionState:
@@ -228,7 +229,7 @@ class SessionController(QObject):
         if output_options.export_images:
             self._export_images(output_options)
 
-    def _export_images(self, output_options: GifOutputOptions) -> None:
+    def _export_images(self, output_options: GifOutputOptions) -> bool:
         assert self._screenshots_directory is not None
         assert self._session_directory is not None
         assert self._session_settings is not None
@@ -237,7 +238,7 @@ class SessionController(QObject):
             if output_options.images_with_gif else output_options.image_export_root
         )
         if image_root is None:
-            return
+            return False
         try:
             for screenshot in self._screenshots_directory.iterdir():
                 if screenshot.is_file():
@@ -245,16 +246,25 @@ class SessionController(QObject):
         except (OSError, FileExportError) as error:
             self.status_changed.emit(f"이미지 저장 실패: {error}")
             self.image_export_failed.emit(str(error), output_options)
+            return False
+        return True
 
     def retry_image_export(self, output_options: GifOutputOptions) -> None:
-        if self._screenshots_directory is not None:
-            self._export_images(output_options)
+        if self._screenshots_directory is not None and self._export_images(output_options):
+            if self._pending_images_only_options is not None:
+                self._pending_images_only_options = None
+                self.complete_with_images_only()
 
     def save_images_only(self, output_options: GifOutputOptions) -> None:
         if self._state is not SessionState.RECORDING:
             return
-        self._export_images(output_options)
-        self.complete_with_images_only()
+        self._pending_images_only_options = output_options
+        if self._export_images(output_options):
+            self._pending_images_only_options = None
+            self.complete_with_images_only()
+        elif self._pending_images_only_options is not None:
+            self._pending_images_only_options = None
+            self.finish_without_gif()
 
     def _capture_screenshot(self) -> None:
         if self._state is not SessionState.RECORDING:

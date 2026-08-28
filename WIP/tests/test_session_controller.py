@@ -9,6 +9,7 @@ from unittest.mock import patch
 from PIL import Image
 
 from gif_output_options import GifOutputOptions
+from file_exporter import FileExportError
 from session_controller import SessionController, SessionState
 from session_recovery import RecoveryCandidate
 from settings import AppSettings
@@ -235,3 +236,22 @@ class SessionControllerTests(TestCase):
             assert controller._session_directory is not None
             self.assertEqual(len(list(controller._session_directory.glob("Diary_*.gif"))), 1)
             self.assertIs(controller.state, SessionState.IDLE)
+
+    def test_failed_images_only_export_keeps_session_unfinished(self) -> None:
+        with TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            controller = SessionController(AppSettings(root / "export", internal_storage_root=root / "internal"))
+
+            def capture(output_directory: Path, **_options: object) -> Path:
+                path = output_directory / "001.png"
+                Image.new("RGB", (8, 8), "green").save(path)
+                return path
+
+            controller._screenshot_capture.capture = capture
+            controller.start()
+            controller._file_exporter.copy_screenshot = lambda *_args: (_ for _ in ()).throw(FileExportError("disk unavailable"))
+            controller.save_images_only(GifOutputOptions(filename="Diary_test.gif"))
+
+            assert controller._session_directory is not None
+            self.assertFalse(any(controller._session_directory.glob("Diary_*.gif")))
+            self.assertTrue((controller._session_directory / ".unfin").is_file())
