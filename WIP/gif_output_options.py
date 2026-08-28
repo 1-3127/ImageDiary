@@ -48,7 +48,7 @@ class GifOutputOptions:
             raise ValueError("워터마크 크기는 작게, 중간, 크게 중 하나여야 합니다.")
         if self.timecode_background_level not in {1, 2, 3}:
             raise ValueError("타임코드 배경 선명도는 약, 중, 강 중 하나여야 합니다.")
-        if self.timecode_horizontal not in {"left", "right"}:
+        if self.timecode_horizontal not in {"left", "center", "right"}:
             raise ValueError("타임코드 가로 위치가 올바르지 않습니다.")
         if self.timecode_vertical not in {"top", "upper_middle", "middle", "lower_middle", "bottom"}:
             raise ValueError("타임코드 세로 위치가 올바르지 않습니다.")

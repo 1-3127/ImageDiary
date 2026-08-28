@@ -80,7 +80,14 @@ class GifPostProcessor:
         font = ImageFont.load_default(size=56)
         left, top, right, bottom = draw.textbbox((0, 0), text, font=font)
         padding = 8
-        x = 10 if self._options.timecode_horizontal == "left" else frame.width - (right - left) - 10
+        text_width = right - left
+        x = (
+            10
+            if self._options.timecode_horizontal == "left"
+            else (frame.width - text_width) // 2
+            if self._options.timecode_horizontal == "center"
+            else frame.width - text_width - 10
+        )
         vertical_ratios = {"top": 0, "upper_middle": 0.25, "middle": 0.5, "lower_middle": 0.75, "bottom": 1}
         y = int((frame.height - (bottom - top)) * vertical_ratios[self._options.timecode_vertical])
         background_alpha = {1: 35, 2: 145, 3: 245}[self._options.timecode_background_level]

@@ -115,14 +115,14 @@ class SettingsDialog(QDialog):
         buttons.accepted.connect(self._save)
         buttons.rejected.connect(self.reject)
 
+        layout.addWidget(help_button)
         layout.addLayout(form)
         layout.addWidget(note)
-        layout.addWidget(cleanup_button)
-        layout.addWidget(reset_button)
-        layout.addWidget(help_button)
-        layout.addWidget(about_button)
         layout.addWidget(unfinished_button)
         layout.addWidget(completed_button)
+        layout.addWidget(cleanup_button)
+        layout.addWidget(reset_button)
+        layout.addWidget(about_button)
         layout.addWidget(buttons)
 
     def _path_row(self, line_edit: QLineEdit, label: str) -> QWidget:
@@ -164,13 +164,14 @@ class SettingsDialog(QDialog):
         self._interval_value.setText(f"{snapped}분")
 
     def _show_help(self) -> None:
-        QMessageBox.information(
-            self,
-            "도움말",
-            "시작을 누르면 즉시 한 장을 캡처하고, 이후 선택한 시스템 시각 경계마다 캡처합니다.\n\n"
-            "종료 및 저장을 누르면 내보내기 설정을 선택할 수 있습니다. 미완료 세션 GIF 저장은 취소·실패한 세션을 다시 내보내고, 이전 세션 GIF 다시 만들기는 내부 이미지가 남은 완료 세션의 GIF를 새로 만듭니다.\n\n"
-            "내부 원본은 최근 수정 세션 2개를 보호하며, 나머지는 마지막 활동 또는 생성 날짜로부터 7일이 지나면 자동 정리됩니다.",
-        )
+        dialog = QMessageBox(self); dialog.setWindowTitle("설정 도움말"); dialog.setTextFormat(Qt.TextFormat.RichText); dialog.setTextInteractionFlags(Qt.TextInteractionFlag.TextBrowserInteraction)
+        dialog.setText(
+            "캡처 간격·대상·원본 포맷·Windows 로그인 시 시작을 다음 세션 기본값으로 정합니다.<br><br>"
+            "<b>미완료 세션 GIF 저장</b>은 취소·실패한 세션을 다시 내보냅니다.<br>"
+            "<b>이전 세션 GIF 다시 만들기</b>는 내부 이미지가 남은 완료 세션의 GIF를 새로 만듭니다.<br>"
+            "<b>데이터 정리</b>는 내부 저장소의 최신 2개 외 세션을 휴지통으로 이동합니다.<br><br>"
+            '<a href="https://github.com/1-3127/ImageDiary/blob/main/docs/quick_start.md">GitHub 간단 사용 설명서</a>'
+        ); dialog.exec()
 
     def _show_about(self) -> None:
         dialog = QMessageBox(self)

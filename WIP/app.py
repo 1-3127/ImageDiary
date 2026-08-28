@@ -239,13 +239,13 @@ class MainWindow(QMainWindow):
         QMessageBox.information(self, "설정 초기화", "설정을 기본값으로 복원했습니다.")
 
     def _show_help(self) -> None:
-        QMessageBox.information(
-            self,
-            "도움말",
-            "시작을 누르면 즉시 화면을 캡처하고, 이후 시스템 시각 경계마다 저장합니다.\n\n"
-            "종료 및 저장을 누르면 내보내기 설정이 열립니다. 내보내기 탭에서 GIF·원본 이미지 내보내기 위치를 정하고, 블러/마스킹·워터마크·타임코드 탭에서 공유용 GIF 후처리를 설정할 수 있습니다. 세션으로 돌아가기를 누르면 기록을 계속하며, 취소 후 종료한 세션은 설정의 미완료 세션 GIF 저장에서 이어갈 수 있습니다. GIF 없이 이미지만 내보내면 해당 세션은 완료로 처리됩니다.\n\n"
-            "내부 원본은 최근 2개 세션을 제외하고 생성 날짜로부터 7일이 지나면 자동 정리됩니다.",
-        )
+        dialog = QMessageBox(self); dialog.setWindowTitle("메인 화면 도움말"); dialog.setTextFormat(Qt.TextFormat.RichText); dialog.setTextInteractionFlags(Qt.TextInteractionFlag.TextBrowserInteraction)
+        dialog.setText(
+            "<b>시작</b>을 누르면 즉시 한 장을 캡처하고, 이후 시스템 시각 경계마다 자동 저장합니다.<br><br>"
+            "<b>종료 및 저장</b>을 누르면 기록을 멈추고 내보내기 설정을 엽니다.<br>"
+            "<b>고정</b>은 창을 항상 위에 표시합니다. <b>설정</b>에서는 다음 세션의 기본값과 세션 복구를 관리합니다.<br><br>"
+            '<a href="https://github.com/1-3127/ImageDiary/blob/main/docs/quick_start.md">GitHub 간단 사용 설명서</a>'
+        ); dialog.exec()
 
     def _reset_settings(self, dialog: SettingsDialog) -> None:
         confirmation = QMessageBox(self)

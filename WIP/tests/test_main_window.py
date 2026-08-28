@@ -8,7 +8,7 @@ from unittest.mock import Mock, patch
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from PySide6.QtCore import QSettings
-from PySide6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication, QMessageBox
 
 from app import MainWindow
 from gif_output_dialog import GifOutputDialog
@@ -90,6 +90,16 @@ class MainWindowTests(TestCase):
         self.assertIn("filename", remembered)
         self.assertIn("gif_path", remembered)
         self.assertIn("image_path", remembered)
+        dialog.close()
+
+    def test_export_dialog_cancel_confirmation_accepts_yes(self) -> None:
+        dialog = GifOutputDialog("Diary_0900-1800.gif", Path("D:/WorkDiary"))
+        with patch(
+            "gif_output_dialog.QMessageBox.question",
+            return_value=QMessageBox.StandardButton.Yes,
+        ):
+            dialog.reject()
+        self.assertEqual(dialog.result(), dialog.DialogCode.Rejected)
         dialog.close()
 
     def test_data_cleanup_targets_internal_storage_only(self) -> None:

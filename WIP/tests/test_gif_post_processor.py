@@ -9,6 +9,15 @@ from gif_post_processor import GifPostProcessor
 
 
 class GifPostProcessorTests(TestCase):
+    def test_accepts_center_timecode_position(self) -> None:
+        options = GifOutputOptions(
+            filename="Diary_test.gif",
+            timecode_enabled=True,
+            timecode_horizontal="center",
+        )
+
+        self.assertEqual(options.timecode_horizontal, "center")
+
     def test_masking_preserves_frame_size_without_mutating_source(self) -> None:
         with TemporaryDirectory() as temporary_directory:
             source_path = Path(temporary_directory) / "001.png"

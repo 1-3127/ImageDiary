@@ -7,7 +7,7 @@ from PySide6.QtCore import QSettings, Qt, Signal
 from PySide6.QtGui import QColor, QFont, QPainter
 from PySide6.QtWidgets import (QCheckBox, QComboBox, QDialog, QDialogButtonBox, QFileDialog,
     QFormLayout, QGroupBox, QHBoxLayout, QLabel, QLineEdit, QMessageBox,
-    QPushButton, QSlider, QSpinBox, QTabWidget, QVBoxLayout, QWidget)
+    QPushButton, QSlider, QSpinBox, QTabWidget, QToolButton, QVBoxLayout, QWidget)
 
 from gif_output_options import GifOutputOptions
 
@@ -21,12 +21,13 @@ class _Preview(QWidget):
         if self.watermark:
             painter.setPen(QColor(255, 255, 255, {1: 35, 2: 125, 3: 230}[self.opacity]))
             font = QFont(); font.setPixelSize({1: 14, 2: 22, 3: 34}[self.size]); painter.setFont(font)
-            painter.translate(self.width() // 2, self.height() // 2); painter.rotate(-45)
-            rect = painter.fontMetrics().boundingRect(self.text or "ImageDiary")
-            painter.drawText(-rect.width() // 2, rect.height() // 2, self.text or "ImageDiary")
+            text = self.text or "ImageDiary"; rect = painter.fontMetrics().boundingRect(text)
+            for y in range(-self.height(), self.height() * 2, max(38, rect.height() + 24)):
+                for x in range(-self.width(), self.width() * 2, max(110, rect.width() + 56)):
+                    painter.save(); painter.translate(x, y); painter.rotate(-45); painter.drawText(-rect.width() // 2, rect.height() // 2, text); painter.restore()
         else:
             text = "08/26 19:15" if self.date else "19:15"; font = QFont(); font.setPixelSize(28); painter.setFont(font)
-            rect = painter.fontMetrics().boundingRect(text); x = 10 if self.horizontal == "left" else self.width() - rect.width() - 10; ratios = {"top": 0, "upper_middle": .25, "middle": .5, "lower_middle": .75, "bottom": 1}; y, padding = int((self.height() - rect.height()) * ratios[self.vertical]), 8
+            rect = painter.fontMetrics().boundingRect(text); x = 10 if self.horizontal == "left" else self.width() // 2 - rect.width() // 2 if self.horizontal == "center" else self.width() - rect.width() - 10; ratios = {"top": 0, "upper_middle": .25, "middle": .5, "lower_middle": .75, "bottom": 1}; y, padding = int((self.height() - rect.height()) * ratios[self.vertical]), 8
             painter.fillRect(x-padding, y-padding, rect.width()+padding*2, rect.height()+padding*2, QColor(0, 0, 0, {1: 35, 2: 145, 3: 245}[self.background])); painter.setPen(QColor("white")); painter.drawText(x, y+rect.height(), text)
         painter.end()
 
@@ -75,11 +76,15 @@ class _CombinedPreview(QWidget):
                 for y in range(-radius, radius + 1): painter.drawText(area.x() + 20 + x, area.y() + 70 + y, title)
         painter.setPen(QColor("white")); painter.drawText(area.x() + 20, area.y() + 70, title)
         if self.watermark:
-            painter.save(); painter.translate(area.center()); painter.rotate(-45); font.setPixelSize({1: 16, 2: 24, 3: 34}[self.watermark_size]); painter.setFont(font); painter.setPen(QColor(255, 255, 255, {1: 35, 2: 125, 3: 230}[self.watermark_opacity])); text = self.watermark_text or "ImageDiary"; rect = painter.fontMetrics().boundingRect(text); painter.drawText(-rect.width() // 2, rect.height() // 2, text); painter.restore()
+            font.setPixelSize({1: 16, 2: 24, 3: 34}[self.watermark_size]); painter.setFont(font); painter.setPen(QColor(255, 255, 255, {1: 35, 2: 125, 3: 230}[self.watermark_opacity])); text = self.watermark_text or "ImageDiary"; rect = painter.fontMetrics().boundingRect(text)
+            for y in range(area.top() - area.height(), area.bottom() + area.height(), max(40, rect.height() + 26)):
+                for x in range(area.left() - area.width(), area.right() + area.width(), max(120, rect.width() + 58)):
+                    painter.save(); painter.translate(x, y); painter.rotate(-45); painter.drawText(-rect.width() // 2, rect.height() // 2, text); painter.restore()
+        mask_height = 18
+        if self.hide_top: painter.fillRect(area.x(), area.y(), area.width(), mask_height, QColor("black"))
+        if self.hide_bottom: painter.fillRect(area.x(), area.bottom() - mask_height + 1, area.width(), mask_height, QColor("black"))
         if self.timecode:
-            text = "08/28 19:15" if self.date else "19:15"; font.setPixelSize(18); painter.setFont(font); rect = painter.fontMetrics().boundingRect(text); x = area.x() + 10 if self.horizontal == "left" else area.right() - rect.width() - 10; ratios = {"top": 0, "upper_middle": .25, "middle": .5, "lower_middle": .75, "bottom": 1}; y = area.y() + int((area.height() - rect.height()) * ratios[self.vertical]); painter.fillRect(x - 6, y - 5, rect.width() + 12, rect.height() + 10, QColor(0, 0, 0, {1: 35, 2: 145, 3: 245}[self.timecode_background])); painter.setPen(QColor("white")); painter.drawText(x, y + rect.height(), text)
-        if self.hide_top: painter.fillRect(area.x(), area.y(), area.width(), 50, QColor("black"))
-        if self.hide_bottom: painter.fillRect(area.x(), area.bottom() - 49, area.width(), 50, QColor("black"))
+            text = "08/28 19:15" if self.date else "19:15"; font.setPixelSize(18); painter.setFont(font); rect = painter.fontMetrics().boundingRect(text); x = area.x() + 10 if self.horizontal == "left" else area.center().x() - rect.width() // 2 if self.horizontal == "center" else area.right() - rect.width() - 10; ratios = {"top": 0, "upper_middle": .25, "middle": .5, "lower_middle": .75, "bottom": 1}; y = area.y() + int((area.height() - rect.height()) * ratios[self.vertical]); painter.fillRect(x - 6, y - 5, rect.width() + 12, rect.height() + 10, QColor(0, 0, 0, {1: 35, 2: 145, 3: 245}[self.timecode_background])); painter.setPen(QColor("white")); painter.drawText(x, y + rect.height(), text)
         painter.end()
 
 
@@ -93,7 +98,7 @@ class GifOutputDialog(QDialog):
         return self._return_to_session
 
     def _build(self, filename: str) -> None:
-        layout = QVBoxLayout(self); tabs = QTabWidget(self); layout.addWidget(tabs)
+        layout = QVBoxLayout(self); tabs = QTabWidget(self); tab_row = QHBoxLayout(); tab_row.addWidget(tabs); self._help_button = QToolButton(self); self._help_button.setText("?"); self._help_button.setToolTip("내보내기 설정 도움말"); self._help_button.clicked.connect(self._show_export_help); tab_row.addWidget(self._help_button, alignment=Qt.AlignmentFlag.AlignTop); layout.addLayout(tab_row)
         storage_page = QWidget(tabs); storage_layout = QVBoxLayout(storage_page)
         group = QGroupBox("내보내기", self); form = QFormLayout(group)
         self._filename = QLineEdit(filename, group); self._gif_path, gif_widget = self._path_widget(group); self._image_path, image_widget = self._path_widget(group)
@@ -112,14 +117,15 @@ class GifOutputDialog(QDialog):
         self._watermark = QCheckBox("반복 워터마크", group); self._watermark_text = QLineEdit("ImageDiary", group); self._watermark_opacity = self._slider(group, "약", "중", "강"); self._watermark_size = self._slider(group, "작게", "중간", "크게"); self._watermark_preview = _Preview(True, group)
         form.addRow(self._watermark); form.addRow("워터마크 문구", self._watermark_text); form.addRow("워터마크 선명도", self._watermark_opacity); form.addRow("워터마크 크기", self._watermark_size); form.addRow("워터마크 미리보기", self._watermark_preview); watermark_layout.addWidget(group); watermark_layout.addWidget(QLabel("반시계 45° 반복 워터마크를 설정합니다.", watermark_page)); watermark_layout.addStretch(); tabs.addTab(watermark_page, "워터마크")
         timecode_page = QWidget(tabs); timecode_layout = QVBoxLayout(timecode_page); group = QGroupBox("타임코드", timecode_page); form = QFormLayout(group)
-        self._timecode = QCheckBox("타임코드 표시", group); self._date = QCheckBox("날짜(MM/DD) 함께 표시", group); self._date.setChecked(True); self._timecode_background = self._slider(group, "약", "중", "강"); self._timecode_horizontal = QComboBox(group); self._timecode_horizontal.addItem("좌측", "left"); self._timecode_horizontal.addItem("우측", "right"); self._timecode_vertical = QComboBox(group)
-        for label, value in (("상단", "top"), ("상중", "upper_middle"), ("중", "middle"), ("중하", "lower_middle"), ("하단", "bottom")): self._timecode_vertical.addItem(label, value)
+        self._timecode = QCheckBox("타임코드 표시", group); self._date = QCheckBox("날짜(MM/DD) 함께 표시", group); self._date.setChecked(True); self._timecode_background = self._slider(group, "약", "중", "강"); self._timecode_horizontal = QComboBox(group); self._timecode_horizontal.addItem("좌측", "left"); self._timecode_horizontal.addItem("중앙", "center"); self._timecode_horizontal.addItem("우측", "right"); self._timecode_vertical = QComboBox(group)
+        for label, value in (("상단", "top"), ("상중", "upper_middle"), ("중단", "middle"), ("중하", "lower_middle"), ("하단", "bottom")): self._timecode_vertical.addItem(label, value)
         self._timecode_vertical.setCurrentIndex(1); self._timecode_preview = _Preview(False, group)
         form.addRow(self._timecode); form.addRow(self._date); form.addRow("타임코드 배경 선명도", self._timecode_background); form.addRow("타임코드 가로 위치", self._timecode_horizontal); form.addRow("타임코드 세로 위치", self._timecode_vertical); form.addRow("타임코드 미리보기", self._timecode_preview); timecode_layout.addWidget(group); timecode_layout.addWidget(QLabel("각 이미지의 캡처 시각 표시 위치와 배경을 설정합니다.", timecode_page)); timecode_layout.addStretch(); tabs.addTab(timecode_page, "타임코드")
+        tabs.clear(); tabs.addTab(timecode_page, "타임코드"); tabs.addTab(mask_page, "블러/마스킹"); tabs.addTab(watermark_page, "워터마크"); tabs.addTab(storage_page, "내보내기")
         self._image_only = QPushButton("GIF 없이 이미지만 내보내기", storage_page); self._image_only.setEnabled(False); self._image_only.clicked.connect(self._save_images_only); storage_layout.addWidget(self._image_only)
-        self._remember = QCheckBox("설정 기억하기", self); layout.addWidget(self._remember)
-        layout.addWidget(QLabel("통합 미리보기", self)); self._combined_preview = _CombinedPreview(self); layout.addWidget(self._combined_preview)
+        storage_layout.addWidget(QLabel("통합 미리보기", storage_page)); self._combined_preview = _CombinedPreview(storage_page); storage_layout.addWidget(self._combined_preview)
         note = QLabel("후처리는 GIF에만 적용됩니다.", self); note.setWordWrap(True); layout.addWidget(note)
+        self._remember = QCheckBox("설정 기억하기", self); layout.addWidget(self._remember)
         buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Cancel | QDialogButtonBox.StandardButton.Ok, Qt.Orientation.Horizontal, self); buttons.button(QDialogButtonBox.StandardButton.Ok).setText("GIF 생성"); buttons.button(QDialogButtonBox.StandardButton.Cancel).setText("취소"); buttons.accepted.connect(self._accept); buttons.rejected.connect(self.reject); self._return_button = QPushButton("세션으로 돌아가기", self); self._return_button.clicked.connect(self._return_to_recording); button_row = QHBoxLayout(); button_row.addWidget(self._return_button); button_row.addStretch(); button_row.addWidget(buttons); layout.addLayout(button_row)
         self._export_images.toggled.connect(self._update); self._same_path.toggled.connect(self._update); self._blur.toggled.connect(self._update); self._hide_top.toggled.connect(self._refresh_previews); self._hide_bottom.toggled.connect(self._refresh_previews); self._watermark.toggled.connect(self._update); self._timecode.toggled.connect(self._update)
         self._watermark_text.textChanged.connect(self._refresh_previews); self._value(self._watermark_size).valueChanged.connect(self._refresh_previews); self._value(self._watermark_opacity).valueChanged.connect(self._refresh_previews); self._value(self._blur_strength).valueChanged.connect(self._refresh_previews); self._value(self._timecode_background).valueChanged.connect(self._refresh_previews); self._date.toggled.connect(self._refresh_previews); self._timecode_horizontal.currentIndexChanged.connect(self._refresh_previews); self._timecode_vertical.currentIndexChanged.connect(self._refresh_previews); self._refresh_previews()
@@ -158,6 +164,17 @@ class GifOutputDialog(QDialog):
             self._preferences.sync()
         self.accept()
 
+    def _show_export_help(self) -> None:
+        dialog = QMessageBox(self); dialog.setWindowTitle("내보내기 설정 도움말"); dialog.setTextFormat(Qt.TextFormat.RichText); dialog.setTextInteractionFlags(Qt.TextInteractionFlag.TextBrowserInteraction)
+        dialog.setText(
+            "<b>타임코드</b>: 캡처 시각의 표시 여부·위치·배경을 정합니다.<br>"
+            "<b>블러/마스킹</b>: 전체 블러와 상·하단 50px 마스킹을 GIF에 적용합니다.<br>"
+            "<b>워터마크</b>: 반복 워터마크 문구·선명도·크기를 정합니다.<br>"
+            "<b>내보내기</b>: GIF와 원본 이미지의 내보내기 위치를 정합니다.<br><br>"
+            "후처리는 GIF에만 적용되며 내부 원본은 바뀌지 않습니다.<br>"
+            '<a href="https://github.com/1-3127/ImageDiary/blob/main/docs/quick_start.md">GitHub 간단 사용 설명서</a>'
+        ); dialog.exec()
+
     def _return_to_recording(self) -> None:
         self._return_to_session = True
         super().reject()
@@ -170,7 +187,7 @@ class GifOutputDialog(QDialog):
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No,
         )
-        if answer is QMessageBox.StandardButton.Yes:
+        if answer == QMessageBox.StandardButton.Yes:
             super().reject()
 
     def _save_images_only(self) -> None:
