@@ -27,11 +27,13 @@ from PySide6.QtWidgets import (
 
 from settings import AppSettings, SUPPORTED_CAPTURE_FORMATS
 from data_cleanup import find_cleanup_candidates, move_old_sessions_to_trash
+from error_reporting import ISSUE_URL
 
 
 class SettingsDialog(QDialog):
     settings_saved = Signal(object)
     reset_requested = Signal()
+    unfinished_sessions_requested = Signal()
 
     def __init__(self, settings: AppSettings, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -98,6 +100,8 @@ class SettingsDialog(QDialog):
         help_button.clicked.connect(self._show_help)
         about_button = QPushButton("앱 정보", self)
         about_button.clicked.connect(self._show_about)
+        unfinished_button = QPushButton("미완료 세션 GIF 저장", self)
+        unfinished_button.clicked.connect(self.unfinished_sessions_requested.emit)
 
         buttons = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Save | QDialogButtonBox.StandardButton.Cancel,
@@ -114,6 +118,7 @@ class SettingsDialog(QDialog):
         layout.addWidget(reset_button)
         layout.addWidget(help_button)
         layout.addWidget(about_button)
+        layout.addWidget(unfinished_button)
         layout.addWidget(buttons)
 
     def _path_row(self, line_edit: QLineEdit, label: str) -> QWidget:
@@ -164,14 +169,18 @@ class SettingsDialog(QDialog):
         )
 
     def _show_about(self) -> None:
-        QMessageBox.information(
-            self,
-            "ImageDiary 정보",
-            "ImageDiary v0.3 개발 중\n"
-            "빌드 날짜: 2026-08-26\n"
-            f"실행 경로: {Path(sys.executable).resolve()}\n\n"
-            "Python, PySide6, mss, Pillow 기반",
+        dialog = QMessageBox(self)
+        dialog.setWindowTitle("ImageDiary 정보")
+        dialog.setTextFormat(Qt.TextFormat.RichText)
+        dialog.setTextInteractionFlags(Qt.TextInteractionFlag.TextBrowserInteraction)
+        dialog.setText(
+            "ImageDiary v0.4 개발 중<br>"
+            "빌드 날짜: 2026-08-28<br>"
+            f"실행 경로: {Path(sys.executable).resolve()}<br><br>"
+            "Python, PySide6, mss, Pillow 기반<br>"
+            f'<a href="{ISSUE_URL.rsplit("/issues", 1)[0]}">GitHub 프로젝트 페이지</a>'
         )
+        dialog.exec()
 
     def _cleanup_data(self) -> None:
         internal_root = self._settings.internal_storage_root

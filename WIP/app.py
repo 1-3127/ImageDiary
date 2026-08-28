@@ -19,14 +19,17 @@ from PySide6.QtWidgets import (
 
 from gif_progress_dialog import GifProgressDialog
 from gif_output_dialog import GifOutputDialog
+from gif_output_options import GifOutputOptions
+from error_reporting import issue_report_guidance, show_retry_message
 from recovery_dialog import RecoveryAction, ask_recovery_action
 from session_controller import SessionController, SessionState
-from session_recovery import find_latest_incomplete_session
+from session_recovery import find_latest_incomplete_session, find_marked_incomplete_sessions
 from session_status_widget import SessionStatusWidget
 from settings import AppSettings
 from settings_repository import SettingsRepository
 from settings_dialog import SettingsDialog
 from startup_manager import StartupManager, StartupRegistrationError
+from unfinished_sessions_dialog import UnfinishedSessionsDialog
 
 
 class MainWindow(QMainWindow):
@@ -97,6 +100,10 @@ class MainWindow(QMainWindow):
         )
         self._controller.output_ready.connect(self._open_output_directory)
         self._controller.encoding_progress.connect(self._gif_progress.update_progress)
+        self._controller.gif_build_failed.connect(self._handle_gif_failure)
+        self._controller.image_export_failed.connect(self._handle_image_export_failure)
+        self._controller.screenshot_capture_failed.connect(self._handle_capture_failure)
+        self._controller.configuration_error.connect(self._handle_configuration_error)
 
     def _start(self) -> None:
         self._controller.start()
@@ -136,7 +143,72 @@ class MainWindow(QMainWindow):
         dialog = SettingsDialog(self._settings, self)
         dialog.settings_saved.connect(self._save_settings)
         dialog.reset_requested.connect(lambda: self._reset_settings(dialog))
+        dialog.unfinished_sessions_requested.connect(
+            lambda: self._open_unfinished_session(dialog)
+        )
         dialog.exec()
+
+    def _open_unfinished_session(self, settings_dialog: SettingsDialog) -> None:
+        candidates = find_marked_incomplete_sessions(self._settings.internal_storage_root)
+        if not candidates:
+            QMessageBox.information(settings_dialog, "미완료 세션", "GIF 저장을 다시 시도할 미완료 세션이 없습니다.")
+            return
+        dialog = UnfinishedSessionsDialog(candidates, settings_dialog)
+        if not dialog.exec():
+            return
+        settings_dialog.reject()
+        self._controller.prepare_recovered_finish(dialog.selected_candidate())
+        self._finish()
+
+    def _handle_gif_failure(self, error: str, options: object) -> None:
+        if not isinstance(options, GifOutputOptions):
+            return
+        retry = show_retry_message(self, "GIF 저장 실패", f"GIF를 저장하지 못했습니다.\n{error}")
+        if retry:
+            self._controller.retry_finish(options)
+            return
+        self._controller.mark_current_session_unfinished()
+        QMessageBox.information(
+            self,
+            "미완료 세션 보관",
+            "미완료 세션으로 보관했습니다. 설정의 ‘미완료 세션 GIF 저장’에서 다시 시도할 수 있습니다.",
+        )
+
+    def _handle_image_export_failure(self, error: str, options: object) -> None:
+        if not isinstance(options, GifOutputOptions):
+            return
+        if show_retry_message(self, "이미지 저장 실패", f"원본 이미지를 저장하지 못했습니다.\n{error}"):
+            self._controller.retry_image_export(options)
+
+    def _handle_capture_failure(self, error: str) -> None:
+        if show_retry_message(self, "화면 캡처 실패", f"화면을 캡처하지 못했습니다.\n{error}"):
+            self._controller.retry_capture()
+
+    def _handle_configuration_error(self, error: str) -> None:
+        dialog = QMessageBox(self)
+        dialog.setIcon(QMessageBox.Icon.Warning)
+        dialog.setWindowTitle("설정 또는 저장 경로 오류")
+        dialog.setText(f"설정값 또는 저장 경로를 확인해 주세요.\n{error}")
+        dialog.setInformativeText(issue_report_guidance())
+        reconfigure = dialog.addButton("설정 열기", QMessageBox.ButtonRole.AcceptRole)
+        reset = dialog.addButton("초기화", QMessageBox.ButtonRole.DestructiveRole)
+        dialog.addButton("닫기", QMessageBox.ButtonRole.RejectRole)
+        dialog.exec()
+        if dialog.clickedButton() is reset:
+            self._reset_settings_without_dialog()
+        elif dialog.clickedButton() is reconfigure:
+            self._open_settings()
+
+    def _reset_settings_without_dialog(self) -> None:
+        try:
+            self._startup_manager.set_enabled(False)
+        except StartupRegistrationError as error:
+            QMessageBox.critical(self, "설정 초기화 실패", f"{error}\n\n{issue_report_guidance()}")
+            return
+        self._settings_repository.reset()
+        self._settings = self._settings_repository.load()
+        self._controller.update_settings(self._settings)
+        QMessageBox.information(self, "설정 초기화", "설정을 기본값으로 복원했습니다.")
 
     def _show_help(self) -> None:
         QMessageBox.information(

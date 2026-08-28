@@ -8,6 +8,7 @@ from PySide6.QtCore import QCoreApplication, QTimer
 from PySide6.QtWidgets import QApplication, QMessageBox
 
 from app import MainWindow
+from error_reporting import install_fatal_exception_handler
 from retention import cleanup_expired_sessions
 from settings_repository import SettingsRepository
 from startup_manager import StartupManager
@@ -15,6 +16,7 @@ from startup_manager import StartupManager
 
 def main() -> int:
     application = QApplication(sys.argv)
+    install_fatal_exception_handler(application)
     QCoreApplication.setOrganizationName("ImageDiary")
     QCoreApplication.setApplicationName("ImageDiary")
     settings_repository = SettingsRepository()

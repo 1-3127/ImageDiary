@@ -1,4 +1,4 @@
-"""세션 상태와 UI에 독립적인 캡처·GIF 처리 흐름을 관리한다."""
+"""세션 상태와 캡처·GIF 처리를 관리한다."""
 
 from __future__ import annotations
 
@@ -15,8 +15,8 @@ from gif_output_options import GifOutputOptions
 from gif_post_processor import GifPostProcessor
 from image_order import sorted_image_paths
 from screenshot_capture import ScreenshotCapture, ScreenshotCaptureError
+from session_recovery import RecoveryCandidate, clear_unfinished_marker, mark_session_unfinished
 from settings import AppSettings
-from session_recovery import RecoveryCandidate
 from storage import SessionStorage
 
 
@@ -33,6 +33,10 @@ class SessionController(QObject):
     status_changed = Signal(str)
     output_ready = Signal(Path)
     encoding_progress = Signal(int, int)
+    gif_build_failed = Signal(str, object)
+    image_export_failed = Signal(str, object)
+    screenshot_capture_failed = Signal(str)
+    configuration_error = Signal(str)
 
     def __init__(self, settings: AppSettings, parent: QObject | None = None) -> None:
         super().__init__(parent)
@@ -56,79 +60,56 @@ class SessionController(QObject):
     def start(self) -> None:
         if self._state is not SessionState.IDLE:
             return
-
         self._session_settings = self._next_settings
         self._storage = SessionStorage(self._session_settings.internal_storage_root)
         self._session_start = datetime.now()
         try:
             self._session_directory = self._storage.create_session_directory(
-                self._session_start,
-                (self._session_settings.export_root,),
+                self._session_start, (self._session_settings.export_root,)
             )
             self._screenshots_directory = self._session_directory / "Screenshot"
             self._screenshots_directory.mkdir(parents=True, exist_ok=True)
         except OSError as error:
             self.status_changed.emit(f"세션 시작 실패: {error}")
+            self.configuration_error.emit(str(error))
             return
         self._capture_count = 0
-        self.capture_count_changed.emit(self._capture_count)
+        self.capture_count_changed.emit(0)
         self._set_state(SessionState.RECORDING)
         self.status_changed.emit("기록 중")
-
-        self._scheduler = CaptureScheduler(
-            self._session_settings.capture_interval_seconds,
-            self,
-        )
+        self._scheduler = CaptureScheduler(self._session_settings.capture_interval_seconds, self)
         self._scheduler.capture_due.connect(self._capture_screenshot)
         self._scheduler.next_time_changed.connect(self.next_capture_changed)
         self._scheduler.start()
         self._capture_screenshot()
 
     def update_settings(self, settings: AppSettings) -> None:
-        """새 설정을 다음 세션에 사용한다. 진행 중인 세션 스냅샷은 유지한다."""
-
         self._next_settings = settings
 
     def resume(self, candidate: RecoveryCandidate) -> None:
         if self._state is not SessionState.IDLE:
             return
-
-        self._session_settings = self._next_settings
-        self._storage = SessionStorage(self._session_settings.internal_storage_root)
-        self._session_start = candidate.started_at
-        self._session_directory = candidate.session_directory
-        self._screenshots_directory = candidate.screenshots_directory
-        self._capture_count = len(candidate.image_paths)
-        self.capture_count_changed.emit(self._capture_count)
+        self._load_recovery_candidate(candidate)
         self._set_state(SessionState.RECORDING)
-        self.status_changed.emit("복구된 세션 기록 중")
-
-        self._scheduler = CaptureScheduler(
-            self._session_settings.capture_interval_seconds,
-            self,
-        )
+        self.status_changed.emit("복구한 세션 기록 중")
+        assert self._session_settings is not None
+        self._scheduler = CaptureScheduler(self._session_settings.capture_interval_seconds, self)
         self._scheduler.capture_due.connect(self._capture_screenshot)
         self._scheduler.next_time_changed.connect(self.next_capture_changed)
         self._scheduler.start()
 
     def finish_recovered(self, candidate: RecoveryCandidate) -> None:
-        if self._state is not SessionState.IDLE:
-            return
-
-        self._session_settings = self._next_settings
-        self._storage = SessionStorage(self._session_settings.internal_storage_root)
-        self._session_start = candidate.started_at
-        self._session_directory = candidate.session_directory
-        self._screenshots_directory = candidate.screenshots_directory
-        self._capture_count = len(candidate.image_paths)
-        self.capture_count_changed.emit(self._capture_count)
-        self._scheduler = None
-        self._set_state(SessionState.RECORDING)
+        self.prepare_recovered_finish(candidate)
         self.finish()
 
     def prepare_recovered_finish(self, candidate: RecoveryCandidate) -> None:
         if self._state is not SessionState.IDLE:
             return
+        self._load_recovery_candidate(candidate)
+        self._scheduler = None
+        self._set_state(SessionState.RECORDING)
+
+    def _load_recovery_candidate(self, candidate: RecoveryCandidate) -> None:
         self._session_settings = self._next_settings
         self._storage = SessionStorage(self._session_settings.internal_storage_root)
         self._session_start = candidate.started_at
@@ -136,8 +117,6 @@ class SessionController(QObject):
         self._screenshots_directory = candidate.screenshots_directory
         self._capture_count = len(candidate.image_paths)
         self.capture_count_changed.emit(self._capture_count)
-        self._scheduler = None
-        self._set_state(SessionState.RECORDING)
 
     def default_gif_filename(self) -> str | None:
         if self._screenshots_directory is None or self._session_directory is None:
@@ -145,14 +124,9 @@ class SessionController(QObject):
         image_paths = sorted_image_paths(self._screenshots_directory)
         if not image_paths:
             return None
-        return self._storage.gif_output_path(
-            self._session_directory,
-            image_paths[0],
-            image_paths[-1],
-        ).name
+        return self._storage.gif_output_path(self._session_directory, image_paths[0], image_paths[-1]).name
 
     def begin_finish(self) -> str | None:
-        """출력 옵션을 고르는 동안 추가 캡처를 멈춘다."""
         if self._state is not SessionState.RECORDING:
             return None
         if self._scheduler is not None:
@@ -160,9 +134,24 @@ class SessionController(QObject):
         return self.default_gif_filename()
 
     def cancel_finish(self) -> None:
-        """출력 설정 취소 시 현재 기록 세션의 캡처를 다시 시작한다."""
-        if self._state is SessionState.RECORDING and self._scheduler is not None:
+        if self._state is not SessionState.RECORDING:
+            return
+        if self._scheduler is not None:
             self._scheduler.start()
+            return
+        self.mark_current_session_unfinished()
+        self.status_changed.emit("GIF 저장 설정을 취소했습니다. 미완료 세션으로 보관했습니다.")
+        self._set_state(SessionState.IDLE)
+
+    def mark_current_session_unfinished(self) -> None:
+        if self._session_directory is not None:
+            mark_session_unfinished(self._session_directory)
+
+    def retry_finish(self, output_options: GifOutputOptions) -> None:
+        if self._state is not SessionState.IDLE or self._session_directory is None:
+            return
+        self._set_state(SessionState.RECORDING)
+        self.finish(output_options)
 
     def finish(self, output_options: GifOutputOptions | None = None) -> None:
         if self._state is not SessionState.RECORDING:
@@ -171,94 +160,84 @@ class SessionController(QObject):
             self._scheduler.stop()
         self._set_state(SessionState.ENCODING)
         self.status_changed.emit("GIF 생성 중")
-
-        assert self._session_start is not None
         assert self._session_directory is not None
         assert self._screenshots_directory is not None
         assert self._session_settings is not None
         try:
             image_paths = sorted_image_paths(self._screenshots_directory)
             if not image_paths:
-                raise ValueError("No screenshots are available for GIF generation.")
+                raise ValueError("캡처 이미지가 없습니다.")
             if output_options is None:
-                output_options = GifOutputOptions(
-                    filename=self._storage.gif_output_path(
-                        self._session_directory,
-                        image_paths[0],
-                        image_paths[-1],
-                    ).name
-                )
+                output_options = GifOutputOptions(filename=self._storage.gif_output_path(
+                    self._session_directory, image_paths[0], image_paths[-1]
+                ).name)
             gif_path = self._storage.gif_output_path(
-                self._session_directory,
-                image_paths[0],
-                image_paths[-1],
-                output_options.filename,
+                self._session_directory, image_paths[0], image_paths[-1], output_options.filename
             )
-            frame_processor = GifPostProcessor(output_options).process
             frame_count = self._gif_builder.build(
-                self._screenshots_directory,
-                gif_path,
+                self._screenshots_directory, gif_path,
                 self._session_settings.gif_frame_duration_ms,
                 self._session_settings.gif_loop,
                 self.encoding_progress.emit,
-                frame_processor,
+                GifPostProcessor(output_options).process,
             )
             exported_gif = self._file_exporter.copy_gif(
                 gif_path,
                 output_options.gif_export_root or self._session_settings.export_root,
                 self._session_directory.name,
             )
-            if output_options.export_images:
-                image_root = (
-                    output_options.gif_export_root or self._session_settings.export_root
-                    if output_options.images_with_gif
-                    else output_options.image_export_root
-                )
-                assert image_root is not None
-                for screenshot in self._screenshots_directory.iterdir():
-                    if screenshot.is_file():
-                        self._file_exporter.copy_screenshot(
-                            screenshot,
-                            image_root,
-                            self._session_directory.name,
-                        )
-            self.status_changed.emit(f"완료: 이미지 {frame_count}장")
+            clear_unfinished_marker(self._session_directory)
         except ValueError:
-            self.status_changed.emit("캡처 이미지가 없어 GIF를 생성하지 않았습니다")
+            self.status_changed.emit("캡처 이미지가 없어 GIF를 생성하지 않았습니다.")
+            self._set_state(SessionState.IDLE)
+            return
         except (OSError, RuntimeError, FileExportError) as error:
             self.status_changed.emit(f"GIF 생성 실패: {error}")
-        finally:
             self._set_state(SessionState.IDLE)
-            if self._session_settings.open_output_on_finish:
-                output_directory = (
-                    exported_gif.parent if "exported_gif" in locals() else self._session_directory
-                )
-                self.output_ready.emit(output_directory)
-
-    def save_images_only(self, output_options: GifOutputOptions) -> None:
-        if self._state is not SessionState.RECORDING:
+            assert output_options is not None
+            self.gif_build_failed.emit(str(error), output_options)
             return
+
+        self.status_changed.emit(f"완료: 이미지 {frame_count}장")
+        if self._session_settings.open_output_on_finish:
+            self.output_ready.emit(exported_gif.parent)
+        self._set_state(SessionState.IDLE)
+        if output_options.export_images:
+            self._export_images(output_options)
+
+    def _export_images(self, output_options: GifOutputOptions) -> None:
         assert self._screenshots_directory is not None
         assert self._session_directory is not None
         assert self._session_settings is not None
-        image_root = (output_options.gif_export_root or self._session_settings.export_root) if output_options.images_with_gif else output_options.image_export_root
+        image_root = (
+            output_options.gif_export_root or self._session_settings.export_root
+            if output_options.images_with_gif else output_options.image_export_root
+        )
         if image_root is None:
             return
         try:
             for screenshot in self._screenshots_directory.iterdir():
-                if screenshot.is_file(): self._file_exporter.copy_screenshot(screenshot, image_root, self._session_directory.name)
-            self.status_changed.emit("이미지 저장 완료")
-            self.output_ready.emit(image_root / self._session_directory.name)
-        except FileExportError as error:
+                if screenshot.is_file():
+                    self._file_exporter.copy_screenshot(screenshot, image_root, self._session_directory.name)
+        except (OSError, FileExportError) as error:
             self.status_changed.emit(f"이미지 저장 실패: {error}")
-        finally:
-            self._set_state(SessionState.IDLE)
+            self.image_export_failed.emit(str(error), output_options)
+
+    def retry_image_export(self, output_options: GifOutputOptions) -> None:
+        if self._screenshots_directory is not None:
+            self._export_images(output_options)
+
+    def save_images_only(self, output_options: GifOutputOptions) -> None:
+        if self._state is not SessionState.RECORDING:
+            return
+        self._export_images(output_options)
+        self.status_changed.emit("이미지 저장 완료")
+        self._set_state(SessionState.IDLE)
 
     def _capture_screenshot(self) -> None:
         if self._state is not SessionState.RECORDING:
             return
         assert self._screenshots_directory is not None
-        assert self._session_directory is not None
         assert self._session_settings is not None
         try:
             self._screenshot_capture.capture(
@@ -273,6 +252,10 @@ class SessionController(QObject):
             self.status_changed.emit("기록 중")
         except ScreenshotCaptureError as error:
             self.status_changed.emit(f"화면 캡처 실패: {error}")
+            self.screenshot_capture_failed.emit(str(error))
+
+    def retry_capture(self) -> None:
+        self._capture_screenshot()
 
     def _set_state(self, state: SessionState) -> None:
         self._state = state

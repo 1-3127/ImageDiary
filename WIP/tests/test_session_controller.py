@@ -186,3 +186,21 @@ class SessionControllerTests(TestCase):
 
             self.assertEqual(received_formats, ["png"])
             self.assertEqual(received_sequences, [1])
+
+    def test_cancelled_recovered_finish_marks_session_and_returns_idle(self) -> None:
+        with TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            session = root / "internal" / "260828"
+            screenshots = session / "Screenshot"
+            screenshots.mkdir(parents=True)
+            image = screenshots / "001.png"
+            Image.new("RGB", (8, 8), "green").save(image)
+            controller = SessionController(AppSettings(root / "export", internal_storage_root=root / "internal"))
+            controller.prepare_recovered_finish(
+                RecoveryCandidate(session, screenshots, (image,), datetime(2026, 8, 28, 10, 0))
+            )
+
+            controller.cancel_finish()
+
+            self.assertIs(controller.state, SessionState.IDLE)
+            self.assertTrue((session / ".unfin").is_file())
