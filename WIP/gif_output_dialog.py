@@ -154,6 +154,9 @@ class GifOutputDialog(QDialog):
         if not bool(self._preferences.value("gif_output/remember", False)):
             return
         self._remember.setChecked(True)
+        self._filename.setText(str(self._preferences.value("gif_output/filename", self._filename.text())))
+        self._gif_path.setText(str(self._preferences.value("gif_output/gif_path", self._gif_path.text())))
+        self._image_path.setText(str(self._preferences.value("gif_output/image_path", self._image_path.text())))
         self._blur.setChecked(bool(self._preferences.value("gif_output/blur", False)))
         self._value(self._blur_strength).setValue(int(self._preferences.value("gif_output/blur_strength", 2)))
         self._watermark.setChecked(bool(self._preferences.value("gif_output/watermark", False)))
@@ -171,7 +174,7 @@ class GifOutputDialog(QDialog):
         self._timecode_vertical.setCurrentIndex(max(0, self._timecode_vertical.findData(self._preferences.value("gif_output/timecode_vertical", "upper_middle"))))
 
     def _remembered_values(self) -> dict[str, object]:
-        return {"remember": True, "blur": self._blur.isChecked(), "blur_strength": self._value(self._blur_strength).value(), "export_images": self._export_images.isChecked(), "same_path": self._same_path.isChecked(), "hide_top": self._hide_top.isChecked(), "hide_bottom": self._hide_bottom.isChecked(), "watermark": self._watermark.isChecked(), "watermark_text": self._watermark_text.text(), "watermark_opacity": self._value(self._watermark_opacity).value(), "watermark_size": self._value(self._watermark_size).value(), "timecode": self._timecode.isChecked(), "date": self._date.isChecked(), "timecode_background": self._value(self._timecode_background).value(), "timecode_horizontal": self._timecode_horizontal.currentData(), "timecode_vertical": self._timecode_vertical.currentData()}
+        return {"remember": True, "filename": self._filename.text(), "gif_path": self._gif_path.text(), "image_path": self._image_path.text(), "blur": self._blur.isChecked(), "blur_strength": self._value(self._blur_strength).value(), "export_images": self._export_images.isChecked(), "same_path": self._same_path.isChecked(), "hide_top": self._hide_top.isChecked(), "hide_bottom": self._hide_bottom.isChecked(), "watermark": self._watermark.isChecked(), "watermark_text": self._watermark_text.text(), "watermark_opacity": self._value(self._watermark_opacity).value(), "watermark_size": self._value(self._watermark_size).value(), "timecode": self._timecode.isChecked(), "date": self._date.isChecked(), "timecode_background": self._value(self._timecode_background).value(), "timecode_horizontal": self._timecode_horizontal.currentData(), "timecode_vertical": self._timecode_vertical.currentData()}
 
     def options(self) -> GifOutputOptions:
         if not self._gif_path.text().strip(): raise ValueError("GIF 내보내기 경로를 선택하세요.")
