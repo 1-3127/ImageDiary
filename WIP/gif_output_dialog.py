@@ -55,6 +55,34 @@ class _MaskPreview(QWidget):
         painter.end()
 
 
+class _CombinedPreview(QWidget):
+    """선택한 GIF 후처리를 한 화면에 겹쳐 보여 주는 간단한 미리보기."""
+
+    def __init__(self, parent: QWidget) -> None:
+        super().__init__(parent)
+        self.blur = False; self.blur_strength = 2; self.hide_top = False; self.hide_bottom = False
+        self.watermark = False; self.watermark_text = "ImageDiary"; self.watermark_opacity = 2; self.watermark_size = 2
+        self.timecode = False; self.date = True; self.timecode_background = 2; self.horizontal = "left"; self.vertical = "upper_middle"
+        self.setFixedHeight(150)
+
+    def paintEvent(self, _event: object) -> None:
+        painter = QPainter(self); painter.fillRect(self.rect(), QColor("#272b33")); area = self.rect().adjusted(8, 8, -8, -8)
+        painter.fillRect(area, QColor("#6686a4")); painter.fillRect(area.x(), area.y(), area.width(), 18, QColor("#d7dde6")); painter.fillRect(area.x(), area.bottom() - 16, area.width(), 17, QColor("#1976d2"))
+        font = QFont(); font.setPixelSize(24); painter.setFont(font); title = "ImageDiary"
+        if self.blur:
+            radius = {1: 1, 2: 3, 3: 7}[self.blur_strength]; painter.setPen(QColor(255, 255, 255, 45))
+            for x in range(-radius, radius + 1):
+                for y in range(-radius, radius + 1): painter.drawText(area.x() + 20 + x, area.y() + 70 + y, title)
+        painter.setPen(QColor("white")); painter.drawText(area.x() + 20, area.y() + 70, title)
+        if self.watermark:
+            painter.save(); painter.translate(area.center()); painter.rotate(-45); font.setPixelSize({1: 16, 2: 24, 3: 34}[self.watermark_size]); painter.setFont(font); painter.setPen(QColor(255, 255, 255, {1: 35, 2: 125, 3: 230}[self.watermark_opacity])); text = self.watermark_text or "ImageDiary"; rect = painter.fontMetrics().boundingRect(text); painter.drawText(-rect.width() // 2, rect.height() // 2, text); painter.restore()
+        if self.timecode:
+            text = "08/28 19:15" if self.date else "19:15"; font.setPixelSize(18); painter.setFont(font); rect = painter.fontMetrics().boundingRect(text); x = area.x() + 10 if self.horizontal == "left" else area.right() - rect.width() - 10; ratios = {"top": 0, "upper_middle": .25, "middle": .5, "lower_middle": .75, "bottom": 1}; y = area.y() + int((area.height() - rect.height()) * ratios[self.vertical]); painter.fillRect(x - 6, y - 5, rect.width() + 12, rect.height() + 10, QColor(0, 0, 0, {1: 35, 2: 145, 3: 245}[self.timecode_background])); painter.setPen(QColor("white")); painter.drawText(x, y + rect.height(), text)
+        if self.hide_top: painter.fillRect(area.x(), area.y(), area.width(), 50, QColor("black"))
+        if self.hide_bottom: painter.fillRect(area.x(), area.bottom() - 49, area.width(), 50, QColor("black"))
+        painter.end()
+
+
 class GifOutputDialog(QDialog):
     image_only_requested = Signal(object)
     def __init__(self, default_filename: str, default_export_root: Path, parent: QWidget | None = None) -> None:
@@ -90,6 +118,7 @@ class GifOutputDialog(QDialog):
         form.addRow(self._timecode); form.addRow(self._date); form.addRow("타임코드 배경 선명도", self._timecode_background); form.addRow("타임코드 가로 위치", self._timecode_horizontal); form.addRow("타임코드 세로 위치", self._timecode_vertical); form.addRow("타임코드 미리보기", self._timecode_preview); timecode_layout.addWidget(group); timecode_layout.addWidget(QLabel("각 이미지의 캡처 시각 표시 위치와 배경을 설정합니다.", timecode_page)); timecode_layout.addStretch(); tabs.addTab(timecode_page, "타임코드")
         self._image_only = QPushButton("GIF 없이 이미지만 내보내기", storage_page); self._image_only.setEnabled(False); self._image_only.clicked.connect(self._save_images_only); storage_layout.addWidget(self._image_only)
         self._remember = QCheckBox("설정 기억하기", self); layout.addWidget(self._remember)
+        layout.addWidget(QLabel("통합 미리보기", self)); self._combined_preview = _CombinedPreview(self); layout.addWidget(self._combined_preview)
         note = QLabel("후처리는 GIF에만 적용됩니다.", self); note.setWordWrap(True); layout.addWidget(note)
         buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Cancel | QDialogButtonBox.StandardButton.Ok, Qt.Orientation.Horizontal, self); buttons.button(QDialogButtonBox.StandardButton.Ok).setText("GIF 생성"); buttons.button(QDialogButtonBox.StandardButton.Cancel).setText("취소"); buttons.accepted.connect(self._accept); buttons.rejected.connect(self.reject); self._return_button = QPushButton("세션으로 돌아가기", self); self._return_button.clicked.connect(self._return_to_recording); button_row = QHBoxLayout(); button_row.addWidget(self._return_button); button_row.addStretch(); button_row.addWidget(buttons); layout.addLayout(button_row)
         self._export_images.toggled.connect(self._update); self._same_path.toggled.connect(self._update); self._blur.toggled.connect(self._update); self._hide_top.toggled.connect(self._refresh_previews); self._hide_bottom.toggled.connect(self._refresh_previews); self._watermark.toggled.connect(self._update); self._timecode.toggled.connect(self._update)
@@ -113,10 +142,10 @@ class GifOutputDialog(QDialog):
         save_images = self._export_images.isChecked(); self._image_only.setEnabled(save_images); self._same_path.setEnabled(save_images); self._image_path_widget.setEnabled(save_images and not self._same_path.isChecked()); self._blur_strength.setEnabled(self._blur.isChecked()); self._blur_preview.setEnabled(self._blur.isChecked())
         enabled = self._watermark.isChecked()
         for widget in (self._watermark_text, self._watermark_opacity, self._watermark_size, self._watermark_preview): widget.setEnabled(enabled)
-        timecode_enabled = self._timecode.isChecked(); self._date.setEnabled(timecode_enabled); self._timecode_background.setEnabled(timecode_enabled); self._timecode_horizontal.setEnabled(timecode_enabled); self._timecode_vertical.setEnabled(timecode_enabled); self._timecode_preview.setEnabled(timecode_enabled)
+        timecode_enabled = self._timecode.isChecked(); self._date.setEnabled(timecode_enabled); self._timecode_background.setEnabled(timecode_enabled); self._timecode_horizontal.setEnabled(timecode_enabled); self._timecode_vertical.setEnabled(timecode_enabled); self._timecode_preview.setEnabled(timecode_enabled); self._refresh_previews()
 
     def _refresh_previews(self) -> None:
-        self._watermark_preview.text = self._watermark_text.text(); self._watermark_preview.size = self._value(self._watermark_size).value(); self._watermark_preview.opacity = self._value(self._watermark_opacity).value(); self._watermark_preview.update(); self._blur_preview.strength = self._value(self._blur_strength).value(); self._blur_preview.update(); self._mask_preview.top = self._hide_top.isChecked(); self._mask_preview.bottom = self._hide_bottom.isChecked(); self._mask_preview.update(); self._timecode_preview.date = self._date.isChecked(); self._timecode_preview.background = self._value(self._timecode_background).value(); self._timecode_preview.horizontal = str(self._timecode_horizontal.currentData()); self._timecode_preview.vertical = str(self._timecode_vertical.currentData()); self._timecode_preview.update()
+        self._watermark_preview.text = self._watermark_text.text(); self._watermark_preview.size = self._value(self._watermark_size).value(); self._watermark_preview.opacity = self._value(self._watermark_opacity).value(); self._watermark_preview.update(); self._blur_preview.strength = self._value(self._blur_strength).value(); self._blur_preview.update(); self._mask_preview.top = self._hide_top.isChecked(); self._mask_preview.bottom = self._hide_bottom.isChecked(); self._mask_preview.update(); self._timecode_preview.date = self._date.isChecked(); self._timecode_preview.background = self._value(self._timecode_background).value(); self._timecode_preview.horizontal = str(self._timecode_horizontal.currentData()); self._timecode_preview.vertical = str(self._timecode_vertical.currentData()); self._timecode_preview.update(); self._combined_preview.blur = self._blur.isChecked(); self._combined_preview.blur_strength = self._value(self._blur_strength).value(); self._combined_preview.hide_top = self._hide_top.isChecked(); self._combined_preview.hide_bottom = self._hide_bottom.isChecked(); self._combined_preview.watermark = self._watermark.isChecked(); self._combined_preview.watermark_text = self._watermark_text.text(); self._combined_preview.watermark_opacity = self._value(self._watermark_opacity).value(); self._combined_preview.watermark_size = self._value(self._watermark_size).value(); self._combined_preview.timecode = self._timecode.isChecked(); self._combined_preview.date = self._date.isChecked(); self._combined_preview.timecode_background = self._value(self._timecode_background).value(); self._combined_preview.horizontal = str(self._timecode_horizontal.currentData()); self._combined_preview.vertical = str(self._timecode_vertical.currentData()); self._combined_preview.update()
 
     def _accept(self) -> None:
         try: options = self.options()
