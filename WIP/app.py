@@ -6,7 +6,7 @@ from dataclasses import replace
 from pathlib import Path
 
 from PySide6.QtCore import Qt, QUrl
-from PySide6.QtGui import QCloseEvent, QDesktopServices
+from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import (
     QHBoxLayout,
     QMainWindow,
@@ -112,15 +112,6 @@ class MainWindow(QMainWindow):
 
     def _start(self) -> None:
         self._controller.start()
-
-    def closeEvent(self, event: QCloseEvent) -> None:
-        """창을 닫을 때 남은 캡처 타이머와 진행 팝업을 명시적으로 종료한다."""
-        self.shutdown()
-        event.accept()
-
-    def shutdown(self) -> None:
-        self._controller.shutdown()
-        self._gif_progress.close()
 
     def _finish(self) -> None:
         default_filename = self._controller.begin_finish()
