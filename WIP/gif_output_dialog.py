@@ -176,6 +176,15 @@ class GifOutputDialog(QDialog):
         ); dialog.exec()
 
     def _return_to_recording(self) -> None:
+        answer = QMessageBox.question(
+            self,
+            "기록 계속",
+            "GIF 생성을 취소하고 기록을 계속하시겠습니까?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if answer != QMessageBox.StandardButton.Yes:
+            return
         self._return_to_session = True
         super().reject()
 

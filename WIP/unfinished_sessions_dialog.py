@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from PySide6.QtWidgets import QComboBox, QDialog, QDialogButtonBox, QLabel, QVBoxLayout, QWidget
 
-from session_recovery import RecoveryCandidate
+from session_recovery import RecoveryCandidate, UNFINISHED_MARKER_NAME
 
 
 class UnfinishedSessionsDialog(QDialog):
@@ -12,8 +12,8 @@ class UnfinishedSessionsDialog(QDialog):
         self,
         candidates: tuple[RecoveryCandidate, ...],
         parent: QWidget | None = None,
-        title: str = "미완료 세션",
-        description: str = "GIF 저장을 다시 시도할 세션을 선택하세요.",
+        title: str = "이전 세션 GIF 다시 만들기",
+        description: str = "GIF를 다시 만들 세션을 선택하세요.",
         confirm_text: str = "내보내기 설정",
     ) -> None:
         super().__init__(parent)
@@ -23,8 +23,9 @@ class UnfinishedSessionsDialog(QDialog):
         layout.addWidget(QLabel(description, self))
         self._sessions = QComboBox(self)
         for candidate in candidates:
+            state = "미완료" if (candidate.session_directory / UNFINISHED_MARKER_NAME).is_file() else "완료"
             self._sessions.addItem(
-                f"{candidate.session_directory.name} · 이미지 {len(candidate.image_paths)}장",
+                f"[{state}] [{candidate.session_directory.name}] [{len(candidate.image_paths)}장]",
                 candidate,
             )
         layout.addWidget(self._sessions)

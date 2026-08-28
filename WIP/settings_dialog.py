@@ -33,8 +33,7 @@ from error_reporting import ISSUE_URL
 class SettingsDialog(QDialog):
     settings_saved = Signal(object)
     reset_requested = Signal()
-    unfinished_sessions_requested = Signal()
-    completed_sessions_requested = Signal()
+    previous_sessions_requested = Signal()
 
     def __init__(self, settings: AppSettings, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -101,10 +100,8 @@ class SettingsDialog(QDialog):
         help_button.clicked.connect(self._show_help)
         about_button = QPushButton("앱 정보", self)
         about_button.clicked.connect(self._show_about)
-        unfinished_button = QPushButton("미완료 세션 GIF 저장", self)
-        unfinished_button.clicked.connect(self.unfinished_sessions_requested.emit)
         completed_button = QPushButton("이전 세션 GIF 다시 만들기", self)
-        completed_button.clicked.connect(self.completed_sessions_requested.emit)
+        completed_button.clicked.connect(self.previous_sessions_requested.emit)
 
         buttons = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Save | QDialogButtonBox.StandardButton.Cancel,
@@ -118,7 +115,6 @@ class SettingsDialog(QDialog):
         layout.addWidget(help_button)
         layout.addLayout(form)
         layout.addWidget(note)
-        layout.addWidget(unfinished_button)
         layout.addWidget(completed_button)
         layout.addWidget(cleanup_button)
         layout.addWidget(reset_button)
@@ -167,8 +163,7 @@ class SettingsDialog(QDialog):
         dialog = QMessageBox(self); dialog.setWindowTitle("설정 도움말"); dialog.setTextFormat(Qt.TextFormat.RichText); dialog.setTextInteractionFlags(Qt.TextInteractionFlag.TextBrowserInteraction)
         dialog.setText(
             "캡처 간격·대상·원본 포맷·Windows 로그인 시 시작을 다음 세션 기본값으로 정합니다.<br><br>"
-            "<b>미완료 세션 GIF 저장</b>은 취소·실패한 세션을 다시 내보냅니다.<br>"
-            "<b>이전 세션 GIF 다시 만들기</b>는 내부 이미지가 남은 완료 세션의 GIF를 새로 만듭니다.<br>"
+            "<b>이전 세션 GIF 다시 만들기</b>는 취소·실패한 미완료 세션과 내부 이미지가 남은 완료 세션의 GIF를 새로 만듭니다.<br>"
             "<b>데이터 정리</b>는 내부 저장소의 최신 2개 외 세션을 휴지통으로 이동합니다.<br><br>"
             '<a href="https://github.com/1-3127/ImageDiary/blob/main/docs/quick_start.md">GitHub 간단 사용 설명서</a>'
         ); dialog.exec()

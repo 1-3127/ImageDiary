@@ -150,36 +150,29 @@ class MainWindow(QMainWindow):
         dialog = SettingsDialog(self._settings, self)
         dialog.settings_saved.connect(self._save_settings)
         dialog.reset_requested.connect(lambda: self._reset_settings(dialog))
-        dialog.unfinished_sessions_requested.connect(
-            lambda: self._open_unfinished_session(dialog)
-        )
-        dialog.completed_sessions_requested.connect(
-            lambda: self._open_completed_session(dialog)
+        dialog.previous_sessions_requested.connect(
+            lambda: self._open_previous_session(dialog)
         )
         dialog.exec()
 
-    def _open_unfinished_session(self, settings_dialog: SettingsDialog) -> None:
-        candidates = find_marked_incomplete_sessions(self._settings.internal_storage_root)
+    def _open_previous_session(self, settings_dialog: SettingsDialog) -> None:
+        marked = find_marked_incomplete_sessions(self._settings.internal_storage_root)
+        completed = find_completed_sessions_with_images(self._settings.internal_storage_root)
+        candidates = tuple(
+            sorted(
+                {candidate.session_directory: candidate for candidate in (*marked, *completed)}.values(),
+                key=lambda candidate: candidate.session_directory.name,
+                reverse=True,
+            )
+        )
         if not candidates:
-            QMessageBox.information(settings_dialog, "미완료 세션", "GIF 저장을 다시 시도할 미완료 세션이 없습니다.")
-            return
-        dialog = UnfinishedSessionsDialog(candidates, settings_dialog)
-        if not dialog.exec():
-            return
-        settings_dialog.reject()
-        self._controller.prepare_recovered_finish(dialog.selected_candidate())
-        self._finish()
-
-    def _open_completed_session(self, settings_dialog: SettingsDialog) -> None:
-        candidates = find_completed_sessions_with_images(self._settings.internal_storage_root)
-        if not candidates:
-            QMessageBox.information(settings_dialog, "이전 세션 GIF 다시 만들기", "내부 이미지가 남아 있는 완료 세션이 없습니다.")
+            QMessageBox.information(settings_dialog, "이전 세션 GIF 다시 만들기", "내부 이미지가 남아 있는 이전 세션이 없습니다.")
             return
         dialog = UnfinishedSessionsDialog(
             candidates,
             settings_dialog,
             title="이전 세션 GIF 다시 만들기",
-            description="GIF를 다시 만들 세션 폴더를 선택하세요.",
+            description="미완료·완료 세션 중 GIF를 다시 만들 세션을 선택하세요.",
             confirm_text="내보내기 설정",
         )
         if not dialog.exec():
