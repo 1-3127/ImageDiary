@@ -16,7 +16,6 @@ from startup_manager import StartupManager
 
 def main() -> int:
     application = QApplication(sys.argv)
-    application.setQuitOnLastWindowClosed(True)
     install_fatal_exception_handler(application)
     QCoreApplication.setOrganizationName("ImageDiary")
     QCoreApplication.setApplicationName("ImageDiary")
@@ -38,7 +37,6 @@ def main() -> int:
 
     window = MainWindow(settings_repository, StartupManager())
     application.aboutToQuit.connect(window.shutdown)
-    application.lastWindowClosed.connect(lambda: application.exit(0))
     window.show()
     QTimer.singleShot(0, window.check_for_recovery)
     if cleanup_error is not None:
