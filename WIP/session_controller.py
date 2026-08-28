@@ -199,7 +199,7 @@ class SessionController(QObject):
             )
             frame_count = self._gif_builder.build(
                 self._screenshots_directory, gif_path,
-                self._session_settings.gif_frame_duration_ms,
+                int(self._session_settings.gif_frame_duration_ms * {1: 0.5, 2: 1.0, 3: 1.5}[output_options.playback_speed]),
                 self._session_settings.gif_loop,
                 self.encoding_progress.emit,
                 GifPostProcessor(output_options).process,

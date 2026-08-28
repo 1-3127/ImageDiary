@@ -27,8 +27,10 @@ class GifBuilderTests(TestCase):
                 self.assertEqual(gif.n_frames, 2)
                 gif.seek(0)
                 self.assertEqual(gif.convert("RGB").getpixel((0, 0)), (0, 0, 255))
+                self.assertEqual(gif.info["duration"], 750)
                 gif.seek(1)
                 self.assertEqual(gif.convert("RGB").getpixel((0, 0)), (255, 0, 0))
+                self.assertEqual(gif.info["duration"], 750)
 
     def test_rejects_empty_screenshot_directory(self) -> None:
         with TemporaryDirectory() as temporary_directory:

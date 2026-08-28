@@ -45,12 +45,16 @@ class GifBuilder:
                     progress_callback(index, progress_total)
 
             first_frame, remaining_frames = frames[0], frames[1:]
+            endpoint_bonus = frame_duration_ms // 2
+            durations = [frame_duration_ms] * len(frames)
+            durations[0] += endpoint_bonus
+            durations[-1] += endpoint_bonus
             first_frame.save(
                 output_path,
                 format="GIF",
                 save_all=True,
                 append_images=remaining_frames,
-                duration=frame_duration_ms,
+                duration=durations,
                 loop=loop,
             )
             if progress_callback is not None:

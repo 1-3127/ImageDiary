@@ -5,7 +5,7 @@ from pathlib import Path
 
 from PySide6.QtCore import QSettings, Qt, Signal
 from PySide6.QtGui import QColor, QFont, QPainter
-from PySide6.QtWidgets import (QCheckBox, QComboBox, QDialog, QDialogButtonBox, QFileDialog,
+from PySide6.QtWidgets import (QButtonGroup, QCheckBox, QComboBox, QDialog, QDialogButtonBox, QFileDialog,
     QFormLayout, QGroupBox, QHBoxLayout, QLabel, QLineEdit, QMessageBox,
     QPushButton, QSlider, QSpinBox, QTabWidget, QToolButton, QVBoxLayout, QWidget)
 
@@ -104,7 +104,11 @@ class GifOutputDialog(QDialog):
         self._filename = QLineEdit(filename, group); self._gif_path, gif_widget = self._path_widget(group); self._image_path, image_widget = self._path_widget(group)
         self._export_images = QCheckBox("원본 이미지 저장", group); self._export_images.setChecked(False)
         self._same_path = QCheckBox("GIF와 같은 경로에 원본 이미지 저장", group); self._same_path.setChecked(True)
-        form.addRow("GIF 이름", self._filename); form.addRow("GIF 내보내기 경로", gif_widget); form.addRow(self._export_images); form.addRow("이미지 내보내기 경로", image_widget); form.addRow(self._same_path); storage_layout.addWidget(group); storage_layout.addWidget(QLabel("GIF와 원본 이미지의 외부 내보내기 위치를 정합니다.", storage_page)); storage_layout.addStretch(); tabs.addTab(storage_page, "내보내기")
+        self._playback_group = QButtonGroup(group); self._playback_group.setExclusive(True); playback_widget = QWidget(group); playback_layout = QHBoxLayout(playback_widget); playback_layout.setContentsMargins(0, 0, 0, 0)
+        for identifier, label in ((1, "빠르게"), (2, "기본"), (3, "느리게")):
+            button = QCheckBox(label, playback_widget); self._playback_group.addButton(button, identifier); playback_layout.addWidget(button)
+        self._playback_group.button(2).setChecked(True)
+        form.addRow("GIF 이름", self._filename); form.addRow("GIF 내보내기 경로", gif_widget); form.addRow("재생 속도", playback_widget); form.addRow(self._export_images); form.addRow("이미지 내보내기 경로", image_widget); form.addRow(self._same_path); storage_layout.addWidget(group); storage_layout.addWidget(QLabel("GIF와 원본 이미지의 외부 내보내기 위치를 정합니다. 첫·마지막 이미지는 선택한 표시 시간보다 50% 더 길게 표시됩니다.", storage_page)); storage_layout.addStretch(); tabs.addTab(storage_page, "내보내기")
         self._image_path_widget = image_widget
 
         mask_page = QWidget(tabs); mask_layout = QVBoxLayout(mask_page); group = QGroupBox("블러 및 마스킹", mask_page); form = QFormLayout(group)
@@ -212,6 +216,8 @@ class GifOutputDialog(QDialog):
         self._filename.setText(str(self._preferences.value("gif_output/filename", self._filename.text())))
         self._gif_path.setText(str(self._preferences.value("gif_output/gif_path", self._gif_path.text())))
         self._image_path.setText(str(self._preferences.value("gif_output/image_path", self._image_path.text())))
+        speed = int(self._preferences.value("gif_output/playback_speed", 2))
+        if self._playback_group.button(speed) is not None: self._playback_group.button(speed).setChecked(True)
         self._blur.setChecked(bool(self._preferences.value("gif_output/blur", False)))
         self._value(self._blur_strength).setValue(int(self._preferences.value("gif_output/blur_strength", 2)))
         self._watermark.setChecked(bool(self._preferences.value("gif_output/watermark", False)))
@@ -229,7 +235,7 @@ class GifOutputDialog(QDialog):
         self._timecode_vertical.setCurrentIndex(max(0, self._timecode_vertical.findData(self._preferences.value("gif_output/timecode_vertical", "upper_middle"))))
 
     def _remembered_values(self) -> dict[str, object]:
-        return {"remember": True, "filename": self._filename.text(), "gif_path": self._gif_path.text(), "image_path": self._image_path.text(), "blur": self._blur.isChecked(), "blur_strength": self._value(self._blur_strength).value(), "export_images": self._export_images.isChecked(), "same_path": self._same_path.isChecked(), "hide_top": self._hide_top.isChecked(), "hide_bottom": self._hide_bottom.isChecked(), "watermark": self._watermark.isChecked(), "watermark_text": self._watermark_text.text(), "watermark_opacity": self._value(self._watermark_opacity).value(), "watermark_size": self._value(self._watermark_size).value(), "timecode": self._timecode.isChecked(), "date": self._date.isChecked(), "timecode_background": self._value(self._timecode_background).value(), "timecode_horizontal": self._timecode_horizontal.currentData(), "timecode_vertical": self._timecode_vertical.currentData()}
+        return {"remember": True, "filename": self._filename.text(), "gif_path": self._gif_path.text(), "image_path": self._image_path.text(), "playback_speed": self._playback_group.checkedId(), "blur": self._blur.isChecked(), "blur_strength": self._value(self._blur_strength).value(), "export_images": self._export_images.isChecked(), "same_path": self._same_path.isChecked(), "hide_top": self._hide_top.isChecked(), "hide_bottom": self._hide_bottom.isChecked(), "watermark": self._watermark.isChecked(), "watermark_text": self._watermark_text.text(), "watermark_opacity": self._value(self._watermark_opacity).value(), "watermark_size": self._value(self._watermark_size).value(), "timecode": self._timecode.isChecked(), "date": self._date.isChecked(), "timecode_background": self._value(self._timecode_background).value(), "timecode_horizontal": self._timecode_horizontal.currentData(), "timecode_vertical": self._timecode_vertical.currentData()}
 
     def options(self) -> GifOutputOptions:
         if not self._gif_path.text().strip(): raise ValueError("GIF 내보내기 경로를 선택하세요.")
@@ -237,4 +243,4 @@ class GifOutputDialog(QDialog):
         if self._export_images.isChecked() and not self._same_path.isChecked() and not image_text:
             raise ValueError("이미지 내보내기 경로를 선택하세요.")
         image_root = None if self._same_path.isChecked() or not self._export_images.isChecked() else Path(image_text)
-        return GifOutputOptions(filename=self._filename.text().strip(), gif_export_root=Path(self._gif_path.text().strip()), export_images=self._export_images.isChecked(), images_with_gif=self._same_path.isChecked(), image_export_root=image_root, crop_enabled=self._hide_top.isChecked() or self._hide_bottom.isChecked(), hide_top=self._hide_top.isChecked(), hide_bottom=self._hide_bottom.isChecked(), blur_enabled=self._blur.isChecked(), blur_strength=self._value(self._blur_strength).value(), watermark_enabled=self._watermark.isChecked(), watermark_text=self._watermark_text.text(), watermark_opacity_level=self._value(self._watermark_opacity).value(), watermark_size=self._value(self._watermark_size).value(), timecode_enabled=self._timecode.isChecked(), timecode_show_date=self._date.isChecked(), timecode_background_level=self._value(self._timecode_background).value(), timecode_horizontal=str(self._timecode_horizontal.currentData()), timecode_vertical=str(self._timecode_vertical.currentData()))
+        return GifOutputOptions(filename=self._filename.text().strip(), gif_export_root=Path(self._gif_path.text().strip(),), export_images=self._export_images.isChecked(), images_with_gif=self._same_path.isChecked(), image_export_root=image_root, playback_speed=self._playback_group.checkedId(), crop_enabled=self._hide_top.isChecked() or self._hide_bottom.isChecked(), hide_top=self._hide_top.isChecked(), hide_bottom=self._hide_bottom.isChecked(), blur_enabled=self._blur.isChecked(), blur_strength=self._value(self._blur_strength).value(), watermark_enabled=self._watermark.isChecked(), watermark_text=self._watermark_text.text(), watermark_opacity_level=self._value(self._watermark_opacity).value(), watermark_size=self._value(self._watermark_size).value(), timecode_enabled=self._timecode.isChecked(), timecode_show_date=self._date.isChecked(), timecode_background_level=self._value(self._timecode_background).value(), timecode_horizontal=str(self._timecode_horizontal.currentData()), timecode_vertical=str(self._timecode_vertical.currentData()))

@@ -31,6 +31,7 @@ class GifOutputOptions:
     timecode_background_level: int = 2
     timecode_horizontal: str = "left"
     timecode_vertical: str = "upper_middle"
+    playback_speed: int = 2
 
     def __post_init__(self) -> None:
         filename = Path(self.filename).name
@@ -52,4 +53,6 @@ class GifOutputOptions:
             raise ValueError("타임코드 가로 위치가 올바르지 않습니다.")
         if self.timecode_vertical not in {"top", "upper_middle", "middle", "lower_middle", "bottom"}:
             raise ValueError("타임코드 세로 위치가 올바르지 않습니다.")
+        if self.playback_speed not in {1, 2, 3}:
+            raise ValueError("GIF 재생 속도는 빠르게, 기본, 느리게 중 하나여야 합니다.")
         object.__setattr__(self, "filename", filename)
