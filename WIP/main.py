@@ -38,7 +38,6 @@ def main() -> int:
 
     window = MainWindow(settings_repository, StartupManager())
     application.aboutToQuit.connect(window.shutdown)
-    application.lastWindowClosed.connect(lambda: application.exit(0))
     window.show()
     QTimer.singleShot(0, window.check_for_recovery)
     if cleanup_error is not None:
