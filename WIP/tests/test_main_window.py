@@ -7,7 +7,7 @@ from unittest.mock import Mock, patch
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from PySide6.QtCore import QSettings
+from PySide6.QtCore import QSettings, Qt
 from PySide6.QtWidgets import QApplication, QMessageBox
 
 from app import MainWindow
@@ -93,6 +93,16 @@ class MainWindowTests(TestCase):
         self.assertIn("filename", remembered)
         self.assertIn("gif_path", remembered)
         self.assertIn("image_path", remembered)
+        dialog.close()
+
+    def test_gif_output_preview_uses_selected_playback_speed(self) -> None:
+        dialog = GifOutputDialog("Diary_0900-1800.gif", Path("D:/WorkDiary"))
+
+        dialog._playback_group.button(1).setChecked(True)
+
+        self.assertEqual(dialog._combined_preview.playback_speed, 1)
+        tabs = dialog._help_button.parent()
+        self.assertIs(tabs.cornerWidget(Qt.Corner.TopRightCorner), dialog._help_button)
         dialog.close()
 
     def test_export_dialog_cancel_confirmation_accepts_yes(self) -> None:

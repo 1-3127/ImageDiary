@@ -18,10 +18,10 @@ class GifPostProcessor:
         processed = frame.convert("RGB")
         if self._options.blur_enabled:
             processed = self._apply_blur(processed)
-        if self._options.crop_enabled:
-            self._apply_letterbox(processed)
         if self._options.watermark_enabled and self._options.watermark_text.strip():
             self._apply_watermark(processed)
+        if self._options.crop_enabled:
+            self._apply_letterbox(processed)
         if self._options.timecode_enabled:
             self._apply_timecode(processed, source_path)
         return processed

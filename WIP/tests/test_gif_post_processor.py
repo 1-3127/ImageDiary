@@ -102,3 +102,30 @@ class GifPostProcessorTests(TestCase):
             with Image.open(source_path) as unchanged:
                 self.assertIsNotNone(ImageChops.difference(processed, unchanged).getbbox())
             processed.close()
+
+    def test_applies_masking_above_watermark_below_timecode(self) -> None:
+        with TemporaryDirectory() as temporary_directory:
+            source_path = Path(temporary_directory) / "001.png"
+            source = Image.new("RGB", (200, 100), "black")
+            source.save(source_path)
+            source.close()
+            processor = GifPostProcessor(
+                GifOutputOptions(
+                    filename="Diary_test.gif",
+                    crop_enabled=True,
+                    hide_top=True,
+                    watermark_enabled=True,
+                    watermark_text="TEST",
+                    timecode_enabled=True,
+                )
+            )
+            call_order: list[str] = []
+            processor._apply_watermark = lambda _frame: call_order.append("watermark")
+            processor._apply_letterbox = lambda _frame: call_order.append("mask")
+            processor._apply_timecode = lambda _frame, _source: call_order.append("timecode")
+
+            with Image.open(source_path) as original:
+                processed = processor.process(original, source_path)
+
+            self.assertEqual(call_order, ["watermark", "mask", "timecode"])
+            processed.close()
