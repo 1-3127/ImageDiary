@@ -1,10 +1,12 @@
 # ImageDiary
 
-ImageDiary는 작업 세션 시작 화면을 즉시 캡처하고 선택한 주기로 화면을 자동 캡처한 뒤, 세션 종료 시 시간순 Animated GIF를 만드는 Windows 데스크톱 프로그램입니다.
+> 작업 과정을 가볍게 기록하고, 한 편의 GIF 작업 일기로 남기세요.
+
+ImageDiary는 작업 세션 시작 화면을 즉시 캡처하고 선택한 주기로 화면을 자동 캡처한 뒤, 세션 종료 시 시간순 Animated GIF를 만드는 Windows 데스크톱 프로그램입니다. 캡처 원본과 GIF 후처리는 로컬 PC에서 처리됩니다.
 
 ## 현재 상태
 
-v0.4 안전장치 구현을 진행 중입니다. v0.3 실사용 테스트에서 확인된 복구·내보내기 오류 흐름을 보완하고 있습니다.
+Windows용 v0.4 릴리즈를 배포했습니다. 다운로드는 [Releases](https://github.com/1-3127/ImageDiary/releases)에서 할 수 있습니다.
 
 - PySide6 기반 최소 UI
 - 5~30분 범위의 5분 단위 캡처 간격
@@ -20,9 +22,25 @@ v0.4 안전장치 구현을 진행 중입니다. v0.3 실사용 테스트에서 
 - GIF·원본 이미지의 개별 저장 경로와 원본 이미지 저장 토글
 - PNG/WebP/JPG 저장 포맷과 품질 설정
 - 항상 위에 고정, Windows 로그인 시작, GIF 진행 팝업
-- 최근 수정 세션 2개 보호 및 생성 날짜 기준 7일 이상 내부 원본 자동 정리
+- 최근 수정 세션 2개 보호 및 마지막 활동일·보존 세션 수·할당 용량 기준의 내부 원본 자동 정리
 
-구현 계획은 [Plan/versioned_implementation_plan.md](Plan/versioned_implementation_plan.md)에서 확인할 수 있습니다.
+## 문서
+
+- [간단 사용설명서](docs/quick_start.md)
+- [정식 사용설명서](docs/user_guide.md)
+- [문제 해결](docs/troubleshooting.md)
+- [제품 소개 문구](docs/product_overview.md)
+- [버전별 구현 기능 기록](docs/version_history.md)
+- [기술 구현 계획](Plan/versioned_implementation_plan.md)
+
+## 설치와 첫 실행
+
+1. Releases에서 Windows ZIP을 다운로드하고 압축을 풉니다.
+2. 압축을 푼 폴더 안의 `ImageDiary.exe`를 실행합니다.
+3. `ImageDiary.exe`와 같은 폴더의 `_internal`은 삭제하거나 분리하지 마세요.
+4. 설정에서 캡처 간격과 저장 포맷을 고른 뒤 `시작`을 누릅니다.
+
+자세한 사용 방법은 [간단 사용설명서](docs/quick_start.md)와 [정식 사용설명서](docs/user_guide.md)를 참고하세요.
 
 ## 프로젝트 구조
 
@@ -69,7 +87,7 @@ python -m unittest discover -s tests -v
 python main.py
 ```
 
-내부 원본은 `C:\temp\workdiary`에 저장됩니다. 최근 수정 세션 2개는 항상 보호되며, 나머지는 세션 생성 날짜로부터 7일이 지나면 자동 정리됩니다. GIF와 원본 이미지의 내보내기 위치는 종료 및 저장 후 열리는 내보내기 설정에서 선택합니다. GIF 저장을 취소해 종료하거나 실패한 세션은 `.unfin` 마커로 보관하며 설정 창에서 다시 내보낼 수 있습니다.
+내부 원본은 `C:\temp\workdiary`에 저장됩니다. 기본 정책은 최근 수정 세션 2개 보호 및 마지막 활동일 7일 경과 세션 정리이며, 설정에서 보존 세션 수·할당 용량·마지막 활동일 기준을 조합할 수 있습니다. GIF와 원본 이미지의 내보내기 위치는 종료 및 저장 후 열리는 내보내기 설정에서 선택합니다. GIF 저장을 취소해 종료하거나 실패한 세션은 `.unfin` 마커로 보관하며 설정 창에서 다시 내보낼 수 있습니다.
 
 ## MVP 범위 제외
 
@@ -77,11 +95,13 @@ python main.py
 
 ## Windows 패키징
 
-PyInstaller 빌드 의존성을 설치한 뒤 저장소 root에서 실행합니다.
+PyInstaller 빌드 의존성을 설치한 뒤, `.spec`의 상대 경로 기준인 `packaging` 폴더에서 실행합니다.
 
 ```powershell
 .\WIP\.venv\Scripts\python.exe -m pip install -r .\WIP\requirements-build.txt
-.\WIP\.venv\Scripts\python.exe -m PyInstaller --clean --noconfirm --distpath .\Release --workpath .\build\pyinstaller .\packaging\ImageDiary.spec
+Push-Location .\packaging
+..\WIP\.venv\Scripts\python.exe -m PyInstaller --clean --noconfirm --distpath ..\Release --workpath ..\build\pyinstaller-v04 .\ImageDiary.spec
+Pop-Location
 ```
 
-결과물은 `Release\ImageDiary-v0.3\ImageDiary.exe`에 생성됩니다.
+결과물은 `Release\ImageDiary-v0.4\ImageDiary.exe`에 생성됩니다. `ImageDiary.exe`만 따로 복사하지 말고, 같은 폴더의 `_internal`을 포함한 전체 폴더를 함께 배포해야 합니다.

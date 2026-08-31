@@ -41,5 +41,5 @@ bundle = COLLECT(
     strip=False,
     upx=True,
     upx_exclude=[],
-    name="ImageDiary-v0.3",
+    name="ImageDiary-v0.4",
 )
