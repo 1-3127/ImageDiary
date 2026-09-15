@@ -90,10 +90,70 @@ class MainWindowTests(TestCase):
         self.assertFalse(options.blur_enabled)
         self.assertEqual(options.gif_export_root, Path("D:/WorkDiary"))
         remembered = dialog._remembered_values()
-        self.assertIn("filename", remembered)
+        self.assertNotIn("filename", remembered)
         self.assertIn("gif_path", remembered)
         self.assertIn("image_path", remembered)
         dialog.close()
+
+    def test_gif_output_preferences_restore_globally_except_filename(self) -> None:
+        with TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            settings_path = root / "gif-output.ini"
+            first = GifOutputDialog(
+                "Diary_first.gif",
+                root,
+                preferences=QSettings(str(settings_path), QSettings.Format.IniFormat),
+            )
+            first._remember.setChecked(True)
+            first._blur.setChecked(True)
+            first._value(first._blur_strength).setValue(3)
+            first._watermark.setChecked(True)
+            first._watermark_text.setText("GLOBAL")
+            first._timecode.setChecked(True)
+            first._playback_group.button(3).setChecked(True)
+            first._accept()
+
+            second = GifOutputDialog(
+                "Diary_second.gif",
+                root,
+                preferences=QSettings(str(settings_path), QSettings.Format.IniFormat),
+            )
+
+            self.assertEqual(second._filename.text(), "Diary_second.gif")
+            self.assertTrue(second._remember.isChecked())
+            self.assertTrue(second._blur.isChecked())
+            self.assertEqual(second._value(second._blur_strength).value(), 3)
+            self.assertTrue(second._watermark.isChecked())
+            self.assertEqual(second._watermark_text.text(), "GLOBAL")
+            self.assertTrue(second._timecode.isChecked())
+            self.assertEqual(second._playback_group.checkedId(), 3)
+            first.deleteLater()
+            second.deleteLater()
+
+    def test_images_only_export_saves_global_preferences(self) -> None:
+        with TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            settings_path = root / "gif-output.ini"
+            dialog = GifOutputDialog(
+                "Diary_first.gif",
+                root,
+                preferences=QSettings(str(settings_path), QSettings.Format.IniFormat),
+            )
+            dialog._remember.setChecked(True)
+            dialog._export_images.setChecked(True)
+            dialog._blur.setChecked(True)
+
+            with patch(
+                "gif_output_dialog.QMessageBox.question",
+                return_value=QMessageBox.StandardButton.Yes,
+            ):
+                dialog._save_images_only()
+
+            stored = QSettings(str(settings_path), QSettings.Format.IniFormat)
+            self.assertTrue(stored.value("gif_output/remember", False, type=bool))
+            self.assertTrue(stored.value("gif_output/blur", False, type=bool))
+            self.assertFalse(stored.contains("gif_output/filename"))
+            dialog.deleteLater()
 
     def test_gif_output_preview_uses_selected_playback_speed(self) -> None:
         dialog = GifOutputDialog("Diary_0900-1800.gif", Path("D:/WorkDiary"))

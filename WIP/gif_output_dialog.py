@@ -100,8 +100,8 @@ class _CombinedPreview(QWidget):
 
 class GifOutputDialog(QDialog):
     image_only_requested = Signal(object)
-    def __init__(self, default_filename: str, default_export_root: Path, parent: QWidget | None = None) -> None:
-        super().__init__(parent); self.setWindowTitle("내보내기 설정"); self._root = default_export_root; self._preferences = QSettings("ImageDiary", "ImageDiary"); self._return_to_session = False; self._build(default_filename); self._load_preferences(); self._update()
+    def __init__(self, default_filename: str, default_export_root: Path, parent: QWidget | None = None, preferences: QSettings | None = None) -> None:
+        super().__init__(parent); self.setWindowTitle("내보내기 설정"); self._root = default_export_root; self._preferences = preferences if preferences is not None else QSettings("ImageDiary", "ImageDiary"); self._return_to_session = False; self._build(default_filename); self._load_preferences(); self._update()
 
     @property
     def return_to_session_requested(self) -> bool:
@@ -170,13 +170,16 @@ class GifOutputDialog(QDialog):
     def _accept(self) -> None:
         try: options = self.options()
         except ValueError as error: QMessageBox.warning(self, "내보내기 설정", str(error)); return
+        self._save_preferences()
+        self.accept()
+
+    def _save_preferences(self) -> None:
         if self._remember.isChecked():
             for key, value in self._remembered_values().items(): self._preferences.setValue(f"gif_output/{key}", value)
-            self._preferences.sync()
         else:
+            self._preferences.remove("gif_output")
             self._preferences.setValue("gif_output/remember", False)
-            self._preferences.sync()
-        self.accept()
+        self._preferences.sync()
 
     def _show_export_help(self) -> None:
         dialog = QMessageBox(self); dialog.setWindowTitle("내보내기 설정 도움말"); dialog.setTextFormat(Qt.TextFormat.RichText); dialog.setTextInteractionFlags(Qt.TextInteractionFlag.TextBrowserInteraction)
@@ -185,6 +188,7 @@ class GifOutputDialog(QDialog):
             "<b>블러/마스킹</b>: 전체 블러와 상·하단 50px 마스킹을 GIF에 적용합니다.<br>"
             "<b>워터마크</b>: 반복 워터마크 문구·선명도·크기를 정합니다.<br>"
             "<b>내보내기</b>: GIF와 원본 이미지의 내보내기 위치를 정합니다.<br><br>"
+            "<b>설정 기억하기</b>: 경로·이미지 저장·후처리·시간 설정을 다음 세션에도 적용합니다. GIF 이름은 세션별 자동 이름을 유지합니다.<br><br>"
             "후처리는 GIF에만 적용되며 내부 원본은 바뀌지 않습니다.<br>"
             '<a href="https://github.com/1-3127/ImageDiary/blob/main/docs/quick_start.md">GitHub 간단 사용 설명서</a>'
         ); dialog.exec()
@@ -214,16 +218,18 @@ class GifOutputDialog(QDialog):
             super().reject()
 
     def _save_images_only(self) -> None:
+        try: options = self.options()
+        except ValueError as error: QMessageBox.warning(self, "내보내기 설정", str(error)); return
         answer = QMessageBox.question(self, "이미지 저장", "정말 GIF없이 이미지만 저장하시겠습니까?")
         if answer is QMessageBox.StandardButton.Yes:
-            self.image_only_requested.emit(self.options())
+            self._save_preferences()
+            self.image_only_requested.emit(options)
             self.accept()
 
     def _load_preferences(self) -> None:
         if not bool(self._preferences.value("gif_output/remember", False)):
             return
         self._remember.setChecked(True)
-        self._filename.setText(str(self._preferences.value("gif_output/filename", self._filename.text())))
         self._gif_path.setText(str(self._preferences.value("gif_output/gif_path", self._gif_path.text())))
         self._image_path.setText(str(self._preferences.value("gif_output/image_path", self._image_path.text())))
         speed = int(self._preferences.value("gif_output/playback_speed", 2))
@@ -245,7 +251,7 @@ class GifOutputDialog(QDialog):
         self._timecode_vertical.setCurrentIndex(max(0, self._timecode_vertical.findData(self._preferences.value("gif_output/timecode_vertical", "upper_middle"))))
 
     def _remembered_values(self) -> dict[str, object]:
-        return {"remember": True, "filename": self._filename.text(), "gif_path": self._gif_path.text(), "image_path": self._image_path.text(), "playback_speed": self._playback_group.checkedId(), "blur": self._blur.isChecked(), "blur_strength": self._value(self._blur_strength).value(), "export_images": self._export_images.isChecked(), "same_path": self._same_path.isChecked(), "hide_top": self._hide_top.isChecked(), "hide_bottom": self._hide_bottom.isChecked(), "watermark": self._watermark.isChecked(), "watermark_text": self._watermark_text.text(), "watermark_opacity": self._value(self._watermark_opacity).value(), "watermark_size": self._value(self._watermark_size).value(), "timecode": self._timecode.isChecked(), "date": self._date.isChecked(), "timecode_background": self._value(self._timecode_background).value(), "timecode_horizontal": self._timecode_horizontal.currentData(), "timecode_vertical": self._timecode_vertical.currentData()}
+        return {"remember": True, "gif_path": self._gif_path.text(), "image_path": self._image_path.text(), "playback_speed": self._playback_group.checkedId(), "blur": self._blur.isChecked(), "blur_strength": self._value(self._blur_strength).value(), "export_images": self._export_images.isChecked(), "same_path": self._same_path.isChecked(), "hide_top": self._hide_top.isChecked(), "hide_bottom": self._hide_bottom.isChecked(), "watermark": self._watermark.isChecked(), "watermark_text": self._watermark_text.text(), "watermark_opacity": self._value(self._watermark_opacity).value(), "watermark_size": self._value(self._watermark_size).value(), "timecode": self._timecode.isChecked(), "date": self._date.isChecked(), "timecode_background": self._value(self._timecode_background).value(), "timecode_horizontal": self._timecode_horizontal.currentData(), "timecode_vertical": self._timecode_vertical.currentData()}
 
     def options(self) -> GifOutputOptions:
         if not self._gif_path.text().strip(): raise ValueError("GIF 내보내기 경로를 선택하세요.")
