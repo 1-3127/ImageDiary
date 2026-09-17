@@ -6,7 +6,7 @@ ImageDiary는 작업 세션 시작 화면을 즉시 캡처하고 선택한 주�
 
 ## 현재 상태
 
-Windows용 v0.4 릴리즈를 배포했습니다. 다운로드는 [Releases](https://github.com/1-3127/ImageDiary/releases)에서 할 수 있습니다.
+Windows용 v0.4.1 릴리즈를 배포했습니다. 다운로드는 [Releases](https://github.com/1-3127/ImageDiary/releases)에서 할 수 있습니다.
 
 - PySide6 기반 최소 UI
 - 5~30분 범위의 5분 단위 캡처 간격
@@ -100,8 +100,8 @@ PyInstaller 빌드 의존성을 설치한 뒤, `.spec`의 상대 경로 기준�
 ```powershell
 .\WIP\.venv\Scripts\python.exe -m pip install -r .\WIP\requirements-build.txt
 Push-Location .\packaging
-..\WIP\.venv\Scripts\python.exe -m PyInstaller --clean --noconfirm --distpath ..\Release --workpath ..\build\pyinstaller-v04 .\ImageDiary.spec
+..\WIP\.venv\Scripts\python.exe -m PyInstaller --clean --noconfirm --distpath ..\Release --workpath ..\build\pyinstaller-v041 .\ImageDiary.spec
 Pop-Location
 ```
 
-결과물은 `Release\ImageDiary-v0.4\ImageDiary.exe`에 생성됩니다. `ImageDiary.exe`만 따로 복사하지 말고, 같은 폴더의 `_internal`을 포함한 전체 폴더를 함께 배포해야 합니다.
+결과물은 `Release\ImageDiary-v0.4.1\ImageDiary.exe`에 생성됩니다. `ImageDiary.exe`만 따로 복사하지 말고, 같은 폴더의 `_internal`을 포함한 전체 폴더를 함께 배포해야 합니다.

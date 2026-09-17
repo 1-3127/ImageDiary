@@ -217,8 +217,8 @@ class SettingsDialog(QDialog):
         dialog.setTextFormat(Qt.TextFormat.RichText)
         dialog.setTextInteractionFlags(Qt.TextInteractionFlag.TextBrowserInteraction)
         dialog.setText(
-            "ImageDiary v0.4 개발 중<br>"
-            "빌드 날짜: 2026-08-28<br>"
+            "ImageDiary v0.4.1<br>"
+            "빌드 날짜: 2026-09-17<br>"
             f"실행 경로: {Path(sys.executable).resolve()}<br><br>"
             "Python, PySide6, mss, Pillow 기반<br>"
             f'<a href="{ISSUE_URL.rsplit("/issues", 1)[0]}">GitHub 프로젝트 페이지</a>'

@@ -14,6 +14,29 @@ from settings_repository import SettingsRepository
 from startup_manager import StartupManager
 
 
+def package_smoke_test() -> int:
+    """사용자 설정과 내부 원본에 접근하지 않고 패키지 UI를 검사한다."""
+    from pathlib import Path
+    from tempfile import TemporaryDirectory
+
+    from PySide6.QtCore import QSettings
+
+    with TemporaryDirectory() as temporary_directory:
+        application = QApplication(["ImageDiary"])
+        backend = QSettings(
+            str(Path(temporary_directory) / "settings.ini"),
+            QSettings.Format.IniFormat,
+        )
+        window = MainWindow(SettingsRepository(backend), StartupManager())
+        window.show()
+        application.processEvents()
+        if not window.isVisible():
+            return 1
+        window.close()
+        application.processEvents()
+    return 0
+
+
 def main() -> int:
     application = QApplication(sys.argv)
     application.setQuitOnLastWindowClosed(True)
@@ -53,4 +76,6 @@ def main() -> int:
 
 
 if __name__ == "__main__":
+    if "--package-smoke-test" in sys.argv[1:]:
+        raise SystemExit(package_smoke_test())
     raise SystemExit(main())
