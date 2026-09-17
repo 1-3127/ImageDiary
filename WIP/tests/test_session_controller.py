@@ -235,3 +235,86 @@ class SessionControllerTests(TestCase):
             assert controller._session_directory is not None
             self.assertEqual(len(list(controller._session_directory.glob("Diary_*.gif"))), 1)
             self.assertIs(controller.state, SessionState.IDLE)
+
+    def test_images_only_export_failure_keeps_session_recoverable(self) -> None:
+        with TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            controller = SessionController(AppSettings(root / "export", internal_storage_root=root / "internal"))
+
+            def capture(output_directory: Path, **_options: object) -> Path:
+                path = output_directory / "001.png"
+                Image.new("RGB", (8, 8), "green").save(path)
+                return path
+
+            controller._screenshot_capture.capture = capture
+            controller.start()
+            failures: list[str] = []
+            controller.image_export_failed.connect(lambda error, _options: failures.append(error))
+            with patch.object(controller._file_exporter, "copy_screenshot", side_effect=OSError("disk unavailable")):
+                controller.save_images_only(GifOutputOptions(filename="Diary_test.gif", export_images=True))
+
+            assert controller._session_directory is not None
+            self.assertEqual(len(failures), 1)
+            self.assertIs(controller.state, SessionState.IDLE)
+            self.assertTrue((controller._session_directory / ".unfin").is_file())
+            self.assertEqual(list(controller._session_directory.glob("Diary_*.gif")), [])
+
+    def test_images_only_export_retry_completes_after_successful_copy(self) -> None:
+        with TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            controller = SessionController(AppSettings(root / "export", internal_storage_root=root / "internal"))
+
+            def capture(output_directory: Path, **_options: object) -> Path:
+                path = output_directory / "001.png"
+                Image.new("RGB", (8, 8), "green").save(path)
+                return path
+
+            controller._screenshot_capture.capture = capture
+            controller.start()
+            original_copy = controller._file_exporter.copy_screenshot
+            attempts = 0
+
+            def copy_after_failure(source: Path, export_root: Path, session_name: str) -> Path:
+                nonlocal attempts
+                attempts += 1
+                if attempts == 1:
+                    raise OSError("temporary disk error")
+                return original_copy(source, export_root, session_name)
+
+            controller.image_export_failed.connect(
+                lambda _error, options: controller.retry_image_export(options)
+            )
+            with patch.object(controller._file_exporter, "copy_screenshot", side_effect=copy_after_failure):
+                controller.save_images_only(GifOutputOptions(filename="Diary_test.gif", export_images=True))
+
+            assert controller._session_directory is not None
+            self.assertEqual(attempts, 2)
+            self.assertIs(controller.state, SessionState.IDLE)
+            self.assertFalse((controller._session_directory / ".unfin").exists())
+            self.assertEqual(len(list(controller._session_directory.glob("Diary_*.gif"))), 1)
+            self.assertTrue((root / "export" / controller._session_directory.name / "Screenshot" / "001.png").is_file())
+
+    def test_gif_post_processing_value_error_is_reported_as_failure(self) -> None:
+        with TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            controller = SessionController(AppSettings(root / "export", internal_storage_root=root / "internal"))
+
+            def capture(output_directory: Path, **_options: object) -> Path:
+                path = output_directory / "001.png"
+                Image.new("RGB", (8, 8), "green").save(path)
+                return path
+
+            controller._screenshot_capture.capture = capture
+            controller.start()
+            failures: list[str] = []
+            statuses: list[str] = []
+            controller.gif_build_failed.connect(lambda error, _options: failures.append(error))
+            controller.status_changed.connect(statuses.append)
+            controller.finish(GifOutputOptions(filename="Diary_test.gif", crop_enabled=True, hide_top=True))
+
+            assert controller._session_directory is not None
+            self.assertEqual(len(failures), 1)
+            self.assertIn("마스킹", failures[0])
+            self.assertTrue(statuses[-1].startswith("GIF 생성 실패:"))
+            self.assertTrue((controller._session_directory / ".unfin").is_file())
+            self.assertIs(controller.state, SessionState.IDLE)

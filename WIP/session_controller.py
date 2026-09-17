@@ -26,6 +26,10 @@ class SessionState(str, Enum):
     ENCODING = "ENCODING"
 
 
+class NoScreenshotsError(ValueError):
+    """GIF를 만들 캡처 이미지가 없는 경우."""
+
+
 class SessionController(QObject):
     state_changed = Signal(SessionState)
     capture_count_changed = Signal(int)
@@ -196,7 +200,7 @@ class SessionController(QObject):
         try:
             image_paths = sorted_image_paths(self._screenshots_directory)
             if not image_paths:
-                raise ValueError("캡처 이미지가 없습니다.")
+                raise NoScreenshotsError("캡처 이미지가 없습니다.")
             if output_options is None:
                 output_options = GifOutputOptions(filename=self._storage.gif_output_path(
                     self._session_directory, image_paths[0], image_paths[-1]
@@ -217,15 +221,16 @@ class SessionController(QObject):
                 self._session_directory.name,
             )
             clear_unfinished_marker(self._session_directory)
-        except ValueError:
+        except NoScreenshotsError:
             self.status_changed.emit("캡처 이미지가 없어 GIF를 생성하지 않았습니다.")
             self._set_state(SessionState.IDLE)
             return
-        except (OSError, RuntimeError, FileExportError) as error:
+        except (OSError, RuntimeError, ValueError) as error:
             self.status_changed.emit(f"GIF 생성 실패: {error}")
+            self.mark_current_session_unfinished()
             self._set_state(SessionState.IDLE)
-            assert output_options is not None
-            self.gif_build_failed.emit(str(error), output_options)
+            if output_options is not None:
+                self.gif_build_failed.emit(str(error), output_options)
             return
 
         self.status_changed.emit(f"완료: 이미지 {frame_count}장")
@@ -235,7 +240,7 @@ class SessionController(QObject):
         if output_options.export_images:
             self._export_images(output_options)
 
-    def _export_images(self, output_options: GifOutputOptions) -> None:
+    def _export_images(self, output_options: GifOutputOptions) -> bool:
         assert self._screenshots_directory is not None
         assert self._session_directory is not None
         assert self._session_settings is not None
@@ -244,7 +249,7 @@ class SessionController(QObject):
             if output_options.images_with_gif else output_options.image_export_root
         )
         if image_root is None:
-            return
+            return False
         try:
             for screenshot in self._screenshots_directory.iterdir():
                 if screenshot.is_file():
@@ -252,16 +257,24 @@ class SessionController(QObject):
         except (OSError, FileExportError) as error:
             self.status_changed.emit(f"이미지 저장 실패: {error}")
             self.image_export_failed.emit(str(error), output_options)
+            return False
+        return True
 
     def retry_image_export(self, output_options: GifOutputOptions) -> None:
-        if self._screenshots_directory is not None:
-            self._export_images(output_options)
+        if self._screenshots_directory is not None and self._export_images(output_options):
+            if self._state is SessionState.RECORDING:
+                self.complete_with_images_only()
 
     def save_images_only(self, output_options: GifOutputOptions) -> None:
         if self._state is not SessionState.RECORDING:
             return
-        self._export_images(output_options)
-        self.complete_with_images_only()
+        exported = self._export_images(output_options)
+        if self._state is not SessionState.RECORDING:
+            return
+        if exported:
+            self.complete_with_images_only()
+        else:
+            self.finish_without_gif()
 
     def _capture_screenshot(self) -> None:
         if self._state is not SessionState.RECORDING:

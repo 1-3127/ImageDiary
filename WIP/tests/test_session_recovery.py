@@ -64,6 +64,20 @@ class SessionRecoveryTests(TestCase):
             self.assertEqual(len(candidates), 1)
             self.assertEqual(candidates[0].session_directory, session)
 
+    def test_marked_session_with_existing_gif_remains_recoverable(self) -> None:
+        with TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            session = root / "260828"
+            screenshots = session / "Screenshot"
+            screenshots.mkdir(parents=True)
+            (screenshots / "001.png").write_bytes(b"image")
+            (session / "Diary_0900-0910.gif").write_bytes(b"partial gif")
+            mark_session_unfinished(session)
+
+            candidates = find_marked_incomplete_sessions(root)
+
+            self.assertEqual([candidate.session_directory for candidate in candidates], [session])
+
     def test_finds_completed_session_when_images_remain(self) -> None:
         with TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)

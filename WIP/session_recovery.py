@@ -82,10 +82,12 @@ def find_completed_sessions_with_images(internal_root: Path) -> tuple[RecoveryCa
 
 
 def recovery_candidate_from_directory(session_directory: Path) -> RecoveryCandidate | None:
-    """GIF가 아직 없는 세션 디렉터리를 복구 후보로 변환한다."""
+    """GIF가 없거나 미완료 마커가 있는 세션을 복구 후보로 변환한다."""
 
     screenshots = session_directory / "Screenshot"
-    if not screenshots.is_dir() or any(session_directory.glob("Diary_*.gif")):
+    if not screenshots.is_dir():
+        return None
+    if any(session_directory.glob("Diary_*.gif")) and not (session_directory / UNFINISHED_MARKER_NAME).is_file():
         return None
     image_paths = tuple(sorted_image_paths(screenshots))
     if not image_paths:
